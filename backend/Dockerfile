@@ -1,6 +1,3 @@
-# =========================
-# Stage 1 - Composer
-# =========================
 FROM composer:2.8 AS composer
 
 WORKDIR /app
@@ -14,12 +11,8 @@ RUN composer install \
     --prefer-dist \
     --optimize-autoloader
 
-# =========================
-# Stage 2 - PHP
-# =========================
 FROM php:8.3-fpm-alpine
 
-# Dependências do sistema
 RUN apk add --no-cache \
     bash \
     curl \
@@ -36,7 +29,6 @@ RUN apk add --no-cache \
     nodejs \
     npm
 
-# Extensões PHP
 RUN docker-php-ext-configure gd \
     --with-freetype \
     --with-jpeg && \
@@ -50,20 +42,15 @@ RUN docker-php-ext-configure gd \
     gd \
     intl
 
-# Diretório
 WORKDIR /var/www
 
-# Copiar composer instalado
 COPY --from=composer /app/vendor ./vendor
 
-# Copiar projeto
 COPY . .
 
-# Permissões Laravel
 RUN chown -R www-data:www-data /var/www && \
     chmod -R 755 storage bootstrap/cache
 
-# Cache otimizado
 RUN php artisan config:cache || true && \
     php artisan route:cache || true && \
     php artisan view:cache || true

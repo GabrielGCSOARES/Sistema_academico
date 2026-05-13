@@ -1,6 +1,3 @@
-# =========================
-# Stage 1 - Build
-# =========================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -13,9 +10,6 @@ COPY . .
 
 RUN npm run build
 
-# =========================
-# Stage 2 - Nginx
-# =========================
 FROM nginx:stable-alpine
 
 COPY --from=builder /app/build /usr/share/nginx/html
