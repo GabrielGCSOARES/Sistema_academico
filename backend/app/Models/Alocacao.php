@@ -9,6 +9,8 @@ class Alocacao extends Model
 {
     use HasFactory;
 
+    protected $table = 'alocacoes';
+
     protected $fillable = [
         'professor_id',
         'sala_id',
@@ -19,8 +21,8 @@ class Alocacao extends Model
 
     protected $casts = [
         'data' => 'date',
-        'horario_inicio' => 'datetime',
-        'horario_fim' => 'datetime',
+        'horario_inicio' => 'datetime:H:i:s',
+        'horario_fim' => 'datetime:H:i:s',
     ];
 
     public function professor()

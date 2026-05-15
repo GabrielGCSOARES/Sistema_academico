@@ -1,19 +1,41 @@
-import axios from 'axios';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  headers: {
-    'Content-Type': 'application/json',
+const request = async (path, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : null;
+
+  if (!response.ok) {
+    const error = new Error(data?.message || 'Erro na requisicao');
+    error.response = {
+      status: response.status,
+      data,
+    };
+    throw error;
   }
-});
 
-export const directorService = {
-  getProfessores: () => api.get('/professores'),
-  getSalas: () => api.get('/salas'),
-  getAlocacoesAtuais: () => api.get('/alocacoes/atuais'),
-  alocarProfessor: (data) => api.post('/alocacoes', data),
-  desalocarProfessor: (alocacaoId) => api.delete(`/alocacoes/${alocacaoId}`),
-  verificarProfessor: (professorId) => api.get(`/professores/${professorId}/verificar-disponibilidade`),
+  return { data };
 };
 
-export default api;
+export const directorService = {
+  getProfessores: () => request('/professores'),
+  getSalas: () => request('/salas'),
+  getAlocacoesAtuais: () => request('/alocacoes/atuais'),
+  alocarProfessor: (data) => request('/alocacoes', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  desalocarProfessor: (alocacaoId) => request(`/alocacoes/${alocacaoId}`, {
+    method: 'DELETE',
+  }),
+  verificarProfessor: (professorId) => request(`/professores/${professorId}/verificar-disponibilidade`),
+};
+
+export default request;

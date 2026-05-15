@@ -6,21 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::create('alocacoes', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('professor_id')->constrained('professores')->onDelete('cascade');
+            $table->foreignId('sala_id')->constrained('salas')->onDelete('cascade');
+            $table->date('data');
+            $table->time('horario_inicio');
+            $table->time('horario_fim')->nullable();
             $table->timestamps();
+            $table->index(['data', 'horario_inicio']);
+            $table->unique(['sala_id', 'data', 'horario_inicio'], 'unique_sala_horario');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::dropIfExists('alocacoes');
     }

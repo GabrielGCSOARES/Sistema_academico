@@ -5,7 +5,6 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 
 RUN composer install \
-    --no-dev \
     --no-interaction \
     --no-scripts \
     --prefer-dist \
@@ -45,15 +44,12 @@ RUN docker-php-ext-configure gd \
 WORKDIR /var/www
 
 COPY --from=composer /app/vendor ./vendor
+COPY --from=composer /usr/bin/composer /usr/bin/composer
 
 COPY . .
 
 RUN chown -R www-data:www-data /var/www && \
     chmod -R 755 storage bootstrap/cache
-
-RUN php artisan config:cache || true && \
-    php artisan route:cache || true && \
-    php artisan view:cache || true
 
 EXPOSE 9000
 

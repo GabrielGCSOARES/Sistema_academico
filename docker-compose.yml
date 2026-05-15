@@ -22,8 +22,10 @@ services:
     working_dir: /var/www
     volumes:
       - ./backend:/var/www
+      - backend_vendor:/var/www/vendor
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     networks:
       - sistema_network
 
@@ -51,14 +53,20 @@ services:
       MYSQL_PASSWORD: root
       MYSQL_USER: laravel
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - sistema_network
 
 volumes:
   mysql_data:
+  backend_vendor:
 
 networks:
   sistema_network:
