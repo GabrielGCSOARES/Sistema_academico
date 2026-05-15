@@ -1,0 +1,191 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.professor-selected {
+  background: #f0f4ff;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.professor-selected h3 {
+  margin: 0;
+  color: #333;
+}
+
+.professor-selected p {
+  margin: 0.25rem 0 0 0;
+  color: #666;
+}
+
+.salas-selection h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.salas-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sala-option {
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.sala-option:hover:not(.indisponivel) {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.sala-option.selected {
+  border-color: #667eea;
+  background: #e8f0fe;
+}
+
+.sala-option.indisponivel {
+  background: #fff5f5;
+  border-color: #ff4757;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.sala-option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.sala-option-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.disponibilidade-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.disponibilidade-badge.disponivel {
+  background: #d4edda;
+  color: #155724;
+}
+
+.disponibilidade-badge.ocupado {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.sala-option p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.sala-bloqueada {
+  margin-top: 0.5rem;
+  text-align: center;
+  color: #ff4757;
+  font-weight: bold;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.cancel-button,
+.confirm-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-button {
+  background: #f0f0f0;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.cancel-button:hover {
+  background: #e0e0e0;
+}
+
+.confirm-button {
+  background: #667eea;
+  color: white;
+  border: none;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background: #5a67d8;
+}
+
+.confirm-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

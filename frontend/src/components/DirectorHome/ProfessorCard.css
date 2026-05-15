@@ -1,0 +1,74 @@
+.professor-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.professor-card.clickable {
+  cursor: pointer;
+}
+
+.professor-card.clickable:hover {
+  background: #e8f0fe;
+  border-color: #667eea;
+  transform: translateX(5px);
+}
+
+.professor-card.alocado {
+  background: #fff3f3;
+  border-color: #ff4757;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.professor-info h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.professor-disciplina {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.professor-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.status-disponivel {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-ocupado {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.bloqueio-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.bloqueio-icon {
+  font-size: 2rem;
+}
