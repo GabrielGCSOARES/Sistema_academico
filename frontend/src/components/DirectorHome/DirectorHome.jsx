@@ -151,13 +151,30 @@ const DirectorHome = () => {
         </aside>
 
         <section className="rooms-section">
-          <h2>Salas de Aula</h2>
+          <h2>Prédio 1</h2>
           <div className="rooms-grid">
             {salas.map(sala => {
               const status = getSalaStatus(sala.id);
               return (
                 <SalaCard
                   key={sala.id}
+                  sala={sala}
+                  status={status}
+                  onDesalocar={() => handleDesalocar(status.alocacaoId)}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rooms-section">
+          <h2>Prédio 2</h2>
+          <div className="rooms-grid">
+            {salas.map(sala => {
+              const status = getSalaStatus(sala.id);
+              return (
+                <SalaCard
+                  key={`predio2-${sala.id}`}
                   sala={sala}
                   status={status}
                   onDesalocar={() => handleDesalocar(status.alocacaoId)}
