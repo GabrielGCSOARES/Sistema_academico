@@ -15,6 +15,7 @@ Route::middleware('api')->group(function () {
     Route::get('/professores', [DirectorController::class, 'getProfessores']);
     Route::get('/salas', [DirectorController::class, 'getSalas']);
     Route::get('/alocacoes/atuais', [DirectorController::class, 'getAlocacoesAtuais']);
+    Route::get('/alocacoes/semana', [DirectorController::class, 'getAlocacoesSemana']);
     Route::post('/alocacoes', [DirectorController::class, 'alocarProfessor']);
     Route::delete('/alocacoes/{id}', [DirectorController::class, 'desalocarProfessor']);
     Route::get('/professores/{id}/verificar-disponibilidade', [DirectorController::class, 'verificarProfessor']);

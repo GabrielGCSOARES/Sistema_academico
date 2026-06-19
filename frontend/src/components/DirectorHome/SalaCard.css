@@ -6,6 +6,18 @@
   transition: all 0.3s;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+}
+
+.sala-card:hover,
+.sala-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.sala-card:focus-visible {
+  outline: 3px solid rgba(102, 126, 234, 0.55);
+  outline-offset: 3px;
 }
 
 .sala-card.ocupada {
@@ -110,28 +122,4 @@
 
 .desalocar-button:hover {
   background: #ff3838;
-}
-
-.bloqueio-visual {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 71, 87, 0.1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-radius: 10px;
-  pointer-events: none;
-}
-
-.bloqueio-visual span {
-  background: rgba(255, 71, 87, 0.9);
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: bold;
-  transform: rotate(-15deg);
-  font-size: 1.2rem;
 }

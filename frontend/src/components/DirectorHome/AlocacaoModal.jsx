@@ -48,7 +48,7 @@ const AlocacaoModal = ({ professor, salas, alocacoes, onClose, onAlocar }) => {
                     <p>Capacidade: {sala.capacidade} alunos</p>
                     {!disponivel && (
                       <div className="sala-bloqueada">
-                        <span>🚫 Sala já está em uso</span>
+                        <span>Sala já está em uso</span>
                       </div>
                     )}
                   </div>

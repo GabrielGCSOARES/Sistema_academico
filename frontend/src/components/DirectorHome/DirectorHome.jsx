@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ProfessorCard from './ProfessorCard';
 import SalaCard from './SalaCard';
 import AlocacaoModal from './AlocacaoModal';
+import SalaHorarioModal from './SalaHorarioModal';
 import { directorService } from '../../services/api';
 import './DirectorHome.css';
 
@@ -9,7 +10,9 @@ const DirectorHome = () => {
   const [professores, setProfessores] = useState([]);
   const [salas, setSalas] = useState([]);
   const [alocacoes, setAlocacoes] = useState([]);
+  const [alocacoesSemana, setAlocacoesSemana] = useState([]);
   const [selectedProfessor, setSelectedProfessor] = useState(null);
+  const [selectedSalaDetails, setSelectedSalaDetails] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -21,15 +24,17 @@ const DirectorHome = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [profResponse, salasResponse, alocResponse] = await Promise.all([
+      const [profResponse, salasResponse, alocResponse, alocSemanaResponse] = await Promise.all([
         directorService.getProfessores(),
         directorService.getSalas(),
-        directorService.getAlocacoesAtuais()
+        directorService.getAlocacoesAtuais(),
+        directorService.getAlocacoesSemana()
       ]);
       
       setProfessores(profResponse.data);
       setSalas(salasResponse.data);
       setAlocacoes(alocResponse.data);
+      setAlocacoesSemana(alocSemanaResponse.data);
       setError(null);
     } catch (err) {
       setError('Erro ao carregar dados. Verifique a conexão com o servidor.');
@@ -42,6 +47,10 @@ const DirectorHome = () => {
   const handleProfessorSelect = (professor) => {
     setSelectedProfessor(professor);
     setShowModal(true);
+  };
+
+  const handleSalaDetailsOpen = (sala, predio) => {
+    setSelectedSalaDetails({ sala, predio });
   };
 
   const handleAlocacao = async (salaId) => {
@@ -60,13 +69,38 @@ const DirectorHome = () => {
       alert('Professor alocado com sucesso!');
     } catch (error) {
       if (error.response && error.response.status === 409) {
-        alert('ATENÇÃO: Este professor já está lecionando em outra sala neste horário!');
+        alert('Este professor já está lecionando em outra sala neste horário.');
       } else if (error.response && error.response.status === 423) {
-        alert('ATENÇÃO: Esta sala já está ocupada neste horário!');
+        alert('Esta sala já está ocupada neste horário.');
       } else {
         alert('Erro ao alocar professor. Tente novamente.');
       }
       console.error('Erro na alocação:', error);
+    }
+  };
+
+  const handleHorarioAlocacao = async ({ professorId, salaId, predio, data, horarioInicio, horarioFim }) => {
+    try {
+      await directorService.alocarProfessor({
+        professor_id: professorId,
+        sala_id: salaId,
+        predio,
+        data,
+        horario_inicio: horarioInicio,
+        horario_fim: horarioFim,
+        horario_atual: horarioInicio
+      });
+
+      await loadData();
+    } catch (error) {
+      if (error.response && error.response.status === 409) {
+        alert('Este professor já está lecionando em outro horário conflitante.');
+      } else if (error.response && error.response.status === 423) {
+        alert('Esta sala já está ocupada neste horário.');
+      } else {
+        alert('Erro ao alocar professor neste horário. Tente novamente.');
+      }
+      console.error('Erro na alocação por horário:', error);
     }
   };
 
@@ -75,10 +109,10 @@ const DirectorHome = () => {
       try {
         await directorService.desalocarProfessor(alocacaoId);
         await loadData();
-        alert('Professor desalocado com sucesso!');
+        alert('Professor retirado com sucesso!');
       } catch (error) {
-        alert('Erro ao desalocar professor.');
-        console.error('Erro ao desalocar:', error);
+        alert('Erro ao retirar professor.');
+        console.error('Erro ao retirar professor:', error);
       }
     }
   };
@@ -87,8 +121,11 @@ const DirectorHome = () => {
     return alocacoes.some(aloc => aloc.professor_id === professorId);
   };
 
-  const getSalaStatus = (salaId) => {
-    const alocacao = alocacoes.find(aloc => aloc.sala_id === salaId);
+  const getSalaStatus = (salaId, predio) => {
+    const alocacao = alocacoes.find(aloc => (
+      Number(aloc.sala_id) === Number(salaId)
+      && (!aloc.predio || aloc.predio === predio)
+    ));
     if (alocacao) {
       const professor = professores.find(p => p.id === alocacao.professor_id);
       return {
@@ -154,12 +191,13 @@ const DirectorHome = () => {
           <h2>Prédio 1</h2>
           <div className="rooms-grid">
             {salas.map(sala => {
-              const status = getSalaStatus(sala.id);
+              const status = getSalaStatus(sala.id, 'Prédio 1');
               return (
                 <SalaCard
                   key={sala.id}
                   sala={sala}
                   status={status}
+                  onOpenDetails={() => handleSalaDetailsOpen(sala, 'Prédio 1')}
                   onDesalocar={() => handleDesalocar(status.alocacaoId)}
                 />
               );
@@ -171,12 +209,13 @@ const DirectorHome = () => {
           <h2>Prédio 2</h2>
           <div className="rooms-grid">
             {salas.map(sala => {
-              const status = getSalaStatus(sala.id);
+              const status = getSalaStatus(sala.id, 'Prédio 2');
               return (
                 <SalaCard
                   key={`predio2-${sala.id}`}
                   sala={sala}
                   status={status}
+                  onOpenDetails={() => handleSalaDetailsOpen(sala, 'Prédio 2')}
                   onDesalocar={() => handleDesalocar(status.alocacaoId)}
                 />
               );
@@ -195,6 +234,18 @@ const DirectorHome = () => {
             setSelectedProfessor(null);
           }}
           onAlocar={handleAlocacao}
+        />
+      )}
+
+      {selectedSalaDetails && (
+        <SalaHorarioModal
+          sala={selectedSalaDetails.sala}
+          predio={selectedSalaDetails.predio}
+          professores={professores}
+          alocacoes={alocacoesSemana}
+          onAlocar={handleHorarioAlocacao}
+          onDesalocar={handleDesalocar}
+          onClose={() => setSelectedSalaDetails(null)}
         />
       )}
     </div>

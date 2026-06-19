@@ -14,6 +14,7 @@ class Alocacao extends Model
     protected $fillable = [
         'professor_id',
         'sala_id',
+        'predio',
         'data',
         'horario_inicio',
         'horario_fim'

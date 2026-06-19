@@ -1,9 +1,27 @@
 import React from 'react';
 import './SalaCard.css';
 
-const SalaCard = ({ sala, status, onDesalocar }) => {
+const SalaCard = ({ sala, status, onDesalocar, onOpenDetails }) => {
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpenDetails();
+    }
+  };
+
+  const handleDesalocarClick = (event) => {
+    event.stopPropagation();
+    onDesalocar();
+  };
+
   return (
-    <div className={`sala-card ${status.ocupada ? 'ocupada' : 'livre'}`}>
+    <div
+      className={`sala-card ${status.ocupada ? 'ocupada' : 'livre'}`}
+      role="button"
+      tabIndex={0}
+      onClick={onOpenDetails}
+      onKeyDown={handleKeyDown}
+    >
       <div className="sala-header">
         <h3>{sala.nome}</h3>
         <span className="sala-capacidade">Capacidade: {sala.capacidade}</span>
@@ -19,13 +37,10 @@ const SalaCard = ({ sala, status, onDesalocar }) => {
             <p className="professor-na-sala">{status.professor}</p>
             <button 
               className="desalocar-button"
-              onClick={onDesalocar}
+              onClick={handleDesalocarClick}
             >
               Remanejar Professor
             </button>
-            <div className="bloqueio-visual">
-              <span>🚫 Sala em uso</span>
-            </div>
           </>
         ) : (
           <>

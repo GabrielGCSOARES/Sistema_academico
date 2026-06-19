@@ -26,8 +26,12 @@ const request = async (path, options = {}) => {
 
 export const directorService = {
   getProfessores: () => request('/professores'),
+  getDocentes: () => request('/professores'),
   getSalas: () => request('/salas'),
+  getHorariosAulas: () => request('/horarios-aulas'),
+  getHorariosAulasPorSala: (salaId) => request(`/salas/${salaId}/horarios-aulas`),
   getAlocacoesAtuais: () => request('/alocacoes/atuais'),
+  getAlocacoesSemana: () => request('/alocacoes/semana'),
   alocarProfessor: (data) => request('/alocacoes', {
     method: 'POST',
     body: JSON.stringify(data),

@@ -1,0 +1,393 @@
+.sala-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 24, 39, 0.72);
+  padding: 1rem;
+}
+
+.sala-modal-content {
+  width: 80vw;
+  height: 80vh;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sala-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.sala-modal-kicker {
+  color: #667eea;
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.2rem;
+}
+
+.sala-modal-header h2 {
+  color: #1f2937;
+  font-size: 1.45rem;
+  margin: 0;
+}
+
+.sala-modal-close {
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.sala-modal-close:hover {
+  background: #e5e7eb;
+}
+
+.sala-modal-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(520px, 2fr);
+  gap: 1rem;
+  min-height: 0;
+  padding: 1rem;
+  flex: 1;
+}
+
+.sala-modal-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.sala-modal-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.sala-modal-panel-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.sala-modal-panel-header span {
+  display: block;
+  color: #4b5563;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 0.15rem;
+}
+
+.periodo-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #eef2ff;
+  border: 1px solid #dbe3ff;
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
+.periodo-filter button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  min-height: 32px;
+  padding: 0 0.7rem;
+}
+
+.periodo-filter button.active {
+  background: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 1px 4px rgba(79, 70, 229, 0.18);
+}
+
+.docentes-api-slot,
+.horarios-api-slot {
+  min-height: 0;
+  overflow: auto;
+}
+
+.docentes-api-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  max-height: 42%;
+}
+
+.docente-row {
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #667eea;
+  border-radius: 8px;
+  padding: 0.85rem;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.docente-row:hover,
+.docente-row.selected {
+  border-color: #667eea;
+  background: #f8f9ff;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.13);
+}
+
+.docente-row strong {
+  display: block;
+  color: #1f2937;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.docente-row span {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.alocacoes-sala {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.alocacoes-sala-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.alocacoes-sala-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.alocacoes-sala-header span {
+  color: #6b7280;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.alocacoes-sala-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.alocacoes-vazias {
+  color: #6b7280;
+  font-size: 0.86rem;
+  margin: 0;
+}
+
+.alocacao-row {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fbfdff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.alocacao-row strong {
+  color: #1f2937;
+  display: block;
+  font-size: 0.86rem;
+  margin-bottom: 0.2rem;
+}
+
+.alocacao-row span {
+  color: #6b7280;
+  display: block;
+  font-size: 0.78rem;
+}
+
+.alocacao-row button,
+.horario-bloco.ocupado button {
+  border: 1px solid #fecdd3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #be123c;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-height: 30px;
+  padding: 0 0.65rem;
+  white-space: nowrap;
+}
+
+.alocacao-row button:hover,
+.horario-bloco.ocupado button:hover {
+  background: #fff1f2;
+}
+
+.dias-semana-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  min-width: 760px;
+}
+
+.dia-coluna {
+  border-right: 1px solid #e5e7eb;
+  min-width: 0;
+}
+
+.dia-coluna:last-child {
+  border-right: 0;
+}
+
+.dia-coluna h4 {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: 0.85rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.horarios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.horario-bloco {
+  min-height: 58px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2937;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.horario-bloco:hover:not(:disabled) {
+  border-color: #667eea;
+  background: #eef2ff;
+}
+
+.horario-bloco:disabled:not(.ocupado) {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.horario-bloco.ocupado {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #7f1d1d;
+  opacity: 1;
+}
+
+.horario-bloco.ocupado strong {
+  font-size: 0.82rem;
+  line-height: 1.15;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.horario-bloco.ocupado span {
+  color: #be123c;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.horario-bloco.ocupado button {
+  margin-top: 0.15rem;
+}
+
+.horario-bloco span + span::before {
+  content: "às ";
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.horario-bloco.ocupado span + span::before {
+  content: "";
+}
+
+@media (max-width: 980px) {
+  .sala-modal-content {
+    width: 94vw;
+    height: 88vh;
+  }
+
+  .sala-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sala-modal-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .sala-modal-overlay {
+    padding: 0.5rem;
+  }
+
+  .sala-modal-content {
+    width: 96vw;
+    height: 92vh;
+  }
+
+  .sala-modal-header {
+    padding: 1rem;
+  }
+
+  .sala-modal-grid {
+    padding: 0.75rem;
+  }
+}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Professor;
 use App\Models\Sala;
 use App\Models\Alocacao;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -30,14 +31,31 @@ class DirectorController extends Controller
 
     public function getAlocacoesAtuais()
     {
+        $horarioAtual = now()->format('H:i:s');
+
         $alocacoes = Alocacao::with(['professor', 'sala'])
             ->where('data', now()->toDateString())
-            ->where(function($query) {
+            ->where('horario_inicio', '<=', $horarioAtual)
+            ->where(function($query) use ($horarioAtual) {
                 $query->whereNull('horario_fim')
-                      ->orWhere('horario_fim', '>=', now());
+                      ->orWhere('horario_fim', '>=', $horarioAtual);
             })
             ->get();
         
+        return response()->json($alocacoes);
+    }
+
+    public function getAlocacoesSemana(Request $request)
+    {
+        $inicioSemana = $request->filled('inicio')
+            ? Carbon::parse($request->inicio)->startOfDay()
+            : now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $fimSemana = (clone $inicioSemana)->addDays(4)->endOfDay();
+
+        $alocacoes = Alocacao::with(['professor', 'sala'])
+            ->whereBetween('data', [$inicioSemana->toDateString(), $fimSemana->toDateString()])
+            ->get();
+
         return response()->json($alocacoes);
     }
 
@@ -46,23 +64,48 @@ class DirectorController extends Controller
         $request->validate([
             'professor_id' => 'required|exists:professores,id',
             'sala_id' => 'required|exists:salas,id',
+            'predio' => 'nullable|string|max:50',
             'data' => 'required|date',
-            'horario_atual' => 'required'
+            'horario_atual' => 'nullable',
+            'horario_inicio' => 'nullable',
+            'horario_fim' => 'nullable'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Verificar se o professor já está alocado neste horário
+            $predio = $request->predio ?? 'Prédio 1';
+            $horarioBase = $request->horario_inicio ?? $request->horario_atual;
+
+            if (!$horarioBase) {
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Horário inicial é obrigatório.'
+                ], 422);
+            }
+
+            $horarioInicio = date('H:i:s', strtotime($horarioBase));
+            $horarioFim = $request->filled('horario_fim')
+                ? date('H:i:s', strtotime($request->horario_fim))
+                : null;
+
+            // Verificar se o professor já está alocado neste intervalo
             $professorAlocado = Alocacao::where('professor_id', $request->professor_id)
                 ->where('data', $request->data)
-                ->where(function($query) use ($request) {
-                    $horario = date('H:i:s', strtotime($request->horario_atual));
-                    $query->where('horario_inicio', '<=', $horario)
-                          ->where(function($q) use ($horario) {
-                              $q->whereNull('horario_fim')
-                                ->orWhere('horario_fim', '>=', $horario);
-                          });
+                ->where(function($query) use ($horarioInicio, $horarioFim) {
+                    if ($horarioFim) {
+                        $query->where('horario_inicio', '<', $horarioFim)
+                              ->where(function($q) use ($horarioInicio) {
+                                  $q->whereNull('horario_fim')
+                                    ->orWhere('horario_fim', '>', $horarioInicio);
+                              });
+                    } else {
+                        $query->where('horario_inicio', '<=', $horarioInicio)
+                              ->where(function($q) use ($horarioInicio) {
+                                  $q->whereNull('horario_fim')
+                                    ->orWhere('horario_fim', '>=', $horarioInicio);
+                              });
+                    }
                 })
                 ->lockForUpdate()
                 ->first();
@@ -70,21 +113,29 @@ class DirectorController extends Controller
             if ($professorAlocado) {
                 DB::rollBack();
                 return response()->json([
-                    'message' => 'ATENÇÃO: Este professor já está lecionando em outra sala neste horário!',
+                    'message' => 'Este professor já está lecionando em outra sala neste horário.',
                     'alocacao_atual' => $professorAlocado
                 ], 409);
             }
 
-            // Verificar se a sala já está ocupada
+            // Verificar se a sala já está ocupada neste prédio e intervalo
             $salaOcupada = Alocacao::where('sala_id', $request->sala_id)
+                ->where('predio', $predio)
                 ->where('data', $request->data)
-                ->where(function($query) use ($request) {
-                    $horario = date('H:i:s', strtotime($request->horario_atual));
-                    $query->where('horario_inicio', '<=', $horario)
-                          ->where(function($q) use ($horario) {
-                              $q->whereNull('horario_fim')
-                                ->orWhere('horario_fim', '>=', $horario);
-                          });
+                ->where(function($query) use ($horarioInicio, $horarioFim) {
+                    if ($horarioFim) {
+                        $query->where('horario_inicio', '<', $horarioFim)
+                              ->where(function($q) use ($horarioInicio) {
+                                  $q->whereNull('horario_fim')
+                                    ->orWhere('horario_fim', '>', $horarioInicio);
+                              });
+                    } else {
+                        $query->where('horario_inicio', '<=', $horarioInicio)
+                              ->where(function($q) use ($horarioInicio) {
+                                  $q->whereNull('horario_fim')
+                                    ->orWhere('horario_fim', '>=', $horarioInicio);
+                              });
+                    }
                 })
                 ->lockForUpdate()
                 ->first();
@@ -92,7 +143,7 @@ class DirectorController extends Controller
             if ($salaOcupada) {
                 DB::rollBack();
                 return response()->json([
-                    'message' => 'ATENÇÃO: Esta sala já está ocupada neste horário!'
+                    'message' => 'Esta sala já está ocupada neste horário.'
                 ], 423);
             }
 
@@ -100,8 +151,10 @@ class DirectorController extends Controller
             $alocacao = Alocacao::create([
                 'professor_id' => $request->professor_id,
                 'sala_id' => $request->sala_id,
+                'predio' => $predio,
                 'data' => $request->data,
-                'horario_inicio' => $request->horario_atual,
+                'horario_inicio' => $horarioInicio,
+                'horario_fim' => $horarioFim,
             ]);
 
             DB::commit();
@@ -123,15 +176,10 @@ class DirectorController extends Controller
     {
         try {
             $alocacao = Alocacao::findOrFail($id);
-            
-            // Registrar horário de fim
-            $alocacao->update([
-                'horario_fim' => now()
-            ]);
+            $alocacao->delete();
 
             return response()->json([
-                'message' => 'Professor desalocado com sucesso!',
-                'alocacao' => $alocacao
+                'message' => 'Professor removido da alocação com sucesso.'
             ]);
 
         } catch (\Exception $e) {
@@ -145,12 +193,14 @@ class DirectorController extends Controller
     {
         try {
             $professor = Professor::findOrFail($professorId);
+            $horarioAtual = now()->format('H:i:s');
             
             $alocacaoAtual = Alocacao::where('professor_id', $professorId)
                 ->where('data', now()->toDateString())
-                ->where(function($query) {
+                ->where('horario_inicio', '<=', $horarioAtual)
+                ->where(function($query) use ($horarioAtual) {
                     $query->whereNull('horario_fim')
-                          ->orWhere('horario_fim', '>=', now());
+                          ->orWhere('horario_fim', '>=', $horarioAtual);
                 })
                 ->with('sala')
                 ->first();
