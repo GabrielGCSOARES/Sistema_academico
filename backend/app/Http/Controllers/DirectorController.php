@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Professor;
 use App\Models\Sala;
 use App\Models\Alocacao;
+use App\Models\Docente;
+use App\Models\Disciplina;
+
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,12 +16,49 @@ class DirectorController extends Controller
 {
     public function getProfessores()
     {
+        // Professores (tabela professores)
         $professores = Professor::where('ativo', true)
+            ->whereNotIn('nome', [
+                'DR. SILVA',
+                'DRA. SANTOS',
+                'PROF. OLIVEIRA',
+            ])
             ->with(['alocacoesAtivas'])
             ->get();
-        
-        return response()->json($professores);
+
+
+        // Docentes vinculados a disciplinas (tabela docentes)
+        // Vamos transformar para o mesmo formato consumido pelo frontend (ProfessorCard)
+        $docentes = Docente::query()
+            ->with(['disciplina'])
+            ->get()
+            ->reject(function ($docente) {
+                $nome = strtoupper(trim($docente->nome));
+                return in_array($nome, [
+                    'DR. SILVA',
+                    'DRA. SANTOS',
+                    'PROF. OLIVEIRA',
+                ]);
+            })
+            ->map(function ($docente) {
+
+                return (object) [
+                    'id' => (string) 'docente-' . $docente->id, // id único no frontend
+                    'nome' => $docente->nome,
+                    'disciplina' => $docente->disciplina?->nome ?? 'Sem disciplina',
+                    'curso' => null,
+                    'ativo' => true,
+                    // Mantemos compatibilidade com a home: se houver alocação, será via professor_id.
+                    // Como docentes não participam de alocação hoje, retornamos []
+                    'alocacoes_ativas' => [],
+                    'alocacoesAtivas' => []
+                ];
+            });
+
+        // Junta os dois conjuntos
+        return response()->json($professores->concat($docentes)->values());
     }
+
 
     public function getSalas()
     {

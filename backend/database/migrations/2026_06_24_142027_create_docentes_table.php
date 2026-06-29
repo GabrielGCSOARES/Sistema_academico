@@ -14,6 +14,10 @@ return new class extends Migration
         Schema::create('docentes', function (Blueprint $table) {
             $table->id();
             $table->string('nome');
+            $table->foreignId('disciplina_id')
+                ->nullable()
+                ->constrained('disciplinas')
+                ->nullOnDelete();
             $table->timestamps();
         });
     }
@@ -26,3 +30,4 @@ return new class extends Migration
         Schema::dropIfExists('docentes');
     }
 };
+

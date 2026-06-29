@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DirectorController;
+use App\Http\Controllers\DocenteDisciplinaController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -13,6 +15,12 @@ use App\Http\Controllers\DirectorController;
 Route::middleware('api')->group(function () {
     // Rotas para o diretor acadêmico
     Route::get('/professores', [DirectorController::class, 'getProfessores']);
+
+    // Vínculo docente → disciplina
+    Route::get('/disciplinas', [DocenteDisciplinaController::class, 'listarDisciplinas']);
+    Route::get('/docentes', [DocenteDisciplinaController::class, 'listarDocentes']);
+    Route::post('/docentes/vincular-disciplina', [DocenteDisciplinaController::class, 'vincular']);
+
     Route::get('/salas', [DirectorController::class, 'getSalas']);
     Route::get('/alocacoes/atuais', [DirectorController::class, 'getAlocacoesAtuais']);
     Route::get('/alocacoes/semana', [DirectorController::class, 'getAlocacoesSemana']);
