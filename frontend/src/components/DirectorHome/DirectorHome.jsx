@@ -20,6 +20,7 @@ const DirectorHome = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [showVinculoModal, setShowVinculoModal] = useState(false);
+  const [pendingAlocacao, setPendingAlocacao] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,35 +45,6 @@ const DirectorHome = () => {
       setAlocacoes(alocResponse?.data || []);
       setAlocacoesSemana(alocSemanaResponse?.data || []);
       setError(null);
-
-      const atualizarProfessor = (docenteId, disciplinaNome) => {
-
-    setProfessores((lista) =>
-
-        lista.map((professor) => {
-
-            if (
-                String(professor.id) === `docente-${docenteId}` ||
-                Number(professor.id) === Number(docenteId)
-            ) {
-
-                return {
-
-                    ...professor,
-
-                    disciplina: disciplinaNome
-
-                };
-
-            }
-
-            return professor;
-
-        })
-
-    );
-
-};
     } catch (err) {
       setError('Erro ao carregar dados. Verifique a conexão com o servidor.');
       console.error('Erro ao carregar dados:', err);
@@ -81,18 +53,35 @@ const DirectorHome = () => {
     }
   };
 
-  const professoresOrdenados = [...professores].sort((a,b)=>{
+  const atualizarProfessor = (docenteId, disciplinaNome) => {
+    setProfessores((lista) =>
+      lista.map((professor) => {
+        if (
+          String(professor.id) === `docente-${docenteId}` ||
+          Number(professor.id) === Number(docenteId)
+        ) {
+          return {
+            ...professor,
+            disciplina: disciplinaNome,
+          };
+        }
+        return professor;
+      })
+    );
+  };
 
+  const professoresOrdenados = [...professores].sort((a, b) => {
     const aTem = Boolean(a.disciplina);
-
     const bTem = Boolean(b.disciplina);
+    if (aTem === bTem) return a.nome.localeCompare(b.nome);
+    return aTem ? -1 : 1;
+  });
 
-    if(aTem===bTem)
-        return a.nome.localeCompare(b.nome);
-
-    return aTem?-1:1;
-
-});
+  const closeVinculoModal = () => {
+    setShowVinculoModal(false);
+    setSelectedDocenteId(null);
+    setPendingAlocacao(null);
+  };
 
   const handleProfessorSelect = (professor) => {
     setSelectedProfessor(professor);
@@ -106,6 +95,16 @@ const DirectorHome = () => {
 
   const handleSalaDetailsOpen = (sala, predio) => {
     setSelectedSalaDetails({ sala, predio });
+  };
+
+  const handleHorarioSelecionado = ({ professorId, salaId, predio, data, horarioInicio, horarioFim }) => {
+    const docenteId = String(professorId).startsWith('docente-')
+      ? Number(String(professorId).replace('docente-', ''))
+      : Number(professorId);
+
+    setPendingAlocacao({ professorId: docenteId, salaId, predio, data, horarioInicio, horarioFim });
+    setSelectedDocenteId(docenteId);
+    setShowVinculoModal(true);
   };
 
   const handleAlocacao = async (salaId) => {
@@ -233,39 +232,22 @@ const DirectorHome = () => {
           <h2>Professores</h2>
           
           <div className="professors-list">
-            {professoresOrdenados.map(...) => (
+            {professoresOrdenados.map((professor) => (
               <ProfessorCard
                 key={professor.id}
                 professor={professor}
                 isAlocado={isProfessorAlocado(professor.id)}
                 onSelect={() => {
+                  if (isProfessorAlocado(professor.id)) return;
 
-                if (isProfessorAlocado(professor.id))
+                  if (String(professor.id).startsWith('docente-')) {
+                    const docenteId = Number(String(professor.id).replace('docente-', ''));
+                    openVinculoModalParaDocente(docenteId);
                     return;
+                  }
 
-                if (String(professor.id).startsWith("docente-")) {
-
-                    const docenteId = Number(
-
-                        String(professor.id)
-
-                            .replace("docente-","")
-
-                    );
-
-                    openVinculoModalParaDocente(
-
-                        docenteId
-
-                    );
-
-                    return;
-
-                }
-
-                handleProfessorSelect(professor);
-
-            }}
+                  handleProfessorSelect(professor);
+                }}
               />
             ))}
           </div>
@@ -323,21 +305,22 @@ const DirectorHome = () => {
 
       {showVinculoModal && (
         <DocenteDisciplinaModal
-          onClose={() => {
-            setShowVinculoModal(false);
-            setSelectedDocenteId(null);
-          }}
+          onClose={closeVinculoModal}
           onSaved={async (dados) => {
-              atualizarProfessor(
+            atualizarProfessor(dados.docente_id, dados.disciplina_nome);
 
-                  dados.docente_id,
+            if (pendingAlocacao) {
+              await handleHorarioAlocacao({
+                ...pendingAlocacao,
+                professorId: Number(dados.docente_id),
+              });
+              closeVinculoModal();
+              setSelectedSalaDetails(null);
+              return;
+            }
 
-                  dados.disciplina_nome
-
-              );
-
-              await loadData();
-
+            await loadData();
+            closeVinculoModal();
           }}
           selectedDocenteId={selectedDocenteId}
         />
@@ -349,7 +332,7 @@ const DirectorHome = () => {
           predio={selectedSalaDetails.predio}
           professores={professores}
           alocacoes={alocacoesSemana}
-          onAlocar={handleHorarioAlocacao}
+          onHorarioSelecionado={handleHorarioSelecionado}
           onDesalocar={handleDesalocar}
           onClose={() => setSelectedSalaDetails(null)}
         />

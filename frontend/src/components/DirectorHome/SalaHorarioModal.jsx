@@ -53,7 +53,7 @@ const formatDateBR = (date) => {
   return `${day}/${month}/${year}`;
 };
 
-const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, onAlocar, onDesalocar }) => {
+const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, onHorarioSelecionado, onDesalocar }) => {
   const [selectedProfessorId, setSelectedProfessorId] = useState(null);
   const [periodo, setPeriodo] = useState('todos');
 
@@ -102,14 +102,16 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
       return;
     }
 
-    onAlocar({
-      professorId: selectedProfessorId,
-      salaId: sala.id,
-      predio,
-      data,
-      horarioInicio: horario.inicio,
-      horarioFim: horario.fim,
-    });
+    if (onHorarioSelecionado) {
+      onHorarioSelecionado({
+        professorId: selectedProfessorId,
+        salaId: sala.id,
+        predio,
+        data,
+        horarioInicio: horario.inicio,
+        horarioFim: horario.fim,
+      });
+    }
   };
 
   const handleDesalocarClick = (alocacaoId) => {

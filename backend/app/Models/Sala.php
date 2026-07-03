@@ -13,9 +13,9 @@ class Sala extends Model
 
     protected $fillable = [
         'nome',
+        'predio',
         'capacidade',
-        'localizacao',
-        'ativa'
+        'tipo'
     ];
 
     public function alocacoes()

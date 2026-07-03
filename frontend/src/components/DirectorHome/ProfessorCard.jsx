@@ -9,6 +9,14 @@ const ProfessorCard = ({ professor, isAlocado, onSelect }) => {
         professor.nome_disciplina ||
         null;
 
+    const handleKeyDown = (event) => {
+        if (isAlocado) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSelect();
+        }
+    };
+
     return (
 
         <div
@@ -16,7 +24,10 @@ const ProfessorCard = ({ professor, isAlocado, onSelect }) => {
                 ${isAlocado ? "alocado" : ""}
                 ${!isAlocado ? "clickable" : ""}
             `}
-            onClick={onSelect}
+            role={!isAlocado ? 'button' : 'article'}
+            tabIndex={!isAlocado ? 0 : -1}
+            onClick={!isAlocado ? onSelect : undefined}
+            onKeyDown={handleKeyDown}
         >
 
             <div className="professor-info">

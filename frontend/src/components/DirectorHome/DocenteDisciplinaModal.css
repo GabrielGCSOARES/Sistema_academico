@@ -24,5 +24,14 @@
   color:#b42318;
 }
 
+.modal-overlay {
+  z-index: 1600;
+}
+
+.modal-content {
+  position: relative;
+  z-index: 1601;
+}
+
 /* reusa classes do AlocacaoModal.css (modal-overlay/modal-content/modal-header etc.) */
 

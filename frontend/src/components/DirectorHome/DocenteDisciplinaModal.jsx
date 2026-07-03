@@ -20,7 +20,7 @@ const docenteSelecionado = docentes.find(
 const disciplinaSelecionada = disciplinas.find(
     d => Number(d.id) === Number(disciplinaId)
 );
-  useEffect(() => { // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
@@ -34,7 +34,6 @@ const disciplinaSelecionada = disciplinas.find(
         setDocentes(docRes.data || []);
         setDisciplinas(discRes.data || []);
 
-        // Se vier docente selecionado, mantém fixo; senão seleciona o primeiro.
         if (!selectedDocenteId && (docRes.data || []).length > 0) {
           setDocenteId(String(docRes.data[0].id));
         }
@@ -49,7 +48,7 @@ const disciplinaSelecionada = disciplinas.find(
     };
 
     load();
-  }, []);
+  }, [selectedDocenteId]);
 
   const handleSubmit = async () => {
 
@@ -66,21 +65,19 @@ const disciplinaSelecionada = disciplinas.find(
         setSaving(true);
 
         await directorService.vincularDocenteDisciplina({
-
-            docente_id: Number(docenteId),
-
-            disciplina_id: Number(disciplinaId)
-
+          docente_id: Number(docenteId),
+          disciplina_id: Number(disciplinaId)
         });
 
         if (onSaved) {
-
-            await onSaved();
-
+          await onSaved({
+            docente_id: Number(docenteId),
+            disciplina_id: Number(disciplinaId),
+            disciplina_nome: disciplinaSelecionada?.nome,
+          });
         }
 
-        alert("Docente vinculado com sucesso!");
-
+        alert('Docente vinculado com sucesso!');
         onClose();
 
     } catch (error) {
