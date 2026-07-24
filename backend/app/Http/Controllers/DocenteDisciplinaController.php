@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Docente;
 use App\Models\Disciplina;
+use App\Models\Professor;
 use Illuminate\Http\Request;
 
 class DocenteDisciplinaController extends Controller
@@ -30,6 +31,12 @@ class DocenteDisciplinaController extends Controller
         $docente = Docente::query()->findOrFail($request->docente_id);
         $docente->disciplina_id = $request->disciplina_id;
         $docente->save();
+
+        $professor = Professor::find($docente->id);
+        if ($professor) {
+            $professor->disciplina = $docente->disciplina?->nome ?? 'Sem disciplina';
+            $professor->save();
+        }
 
         return response()->json([
             'message' => 'Vínculo docente→disciplina salvo com sucesso!',

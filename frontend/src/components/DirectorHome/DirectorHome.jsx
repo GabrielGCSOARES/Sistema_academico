@@ -20,6 +20,8 @@ const DirectorHome = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [showVinculoModal, setShowVinculoModal] = useState(false);
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  const [relatorioProfessorId, setRelatorioProfessorId] = useState('');
   const [pendingAlocacao, setPendingAlocacao] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +78,24 @@ const DirectorHome = () => {
     if (aTem === bTem) return a.nome.localeCompare(b.nome);
     return aTem ? -1 : 1;
   });
+
+  const formatDateBR = (date) => {
+    const [year, month, day] = String(date || '').slice(0, 10).split('-');
+    if (!year || !month || !day) return '-';
+    return `${day}/${month}/${year}`;
+  };
+
+  const normalizeTime = (time) => String(time || '').slice(0, 5);
+
+  const alocacoesRelatorio = alocacoesSemana
+    .filter((alocacao) => (
+      !relatorioProfessorId || Number(alocacao.professor_id) === Number(relatorioProfessorId)
+    ))
+    .sort((a, b) => {
+      const dataA = `${String(a.data || '').slice(0, 10)} ${normalizeTime(a.horario_inicio)}`;
+      const dataB = `${String(b.data || '').slice(0, 10)} ${normalizeTime(b.horario_inicio)}`;
+      return dataA.localeCompare(dataB);
+    });
 
   const closeVinculoModal = () => {
     setShowVinculoModal(false);
@@ -171,6 +191,23 @@ const DirectorHome = () => {
     }
   };
 
+  const handleExportarRelatorioXlsx = async () => {
+    try {
+      const blob = await directorService.exportarProfessoresLecionandoXlsx(relatorioProfessorId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'professores-lecionando.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Erro ao exportar o relatório para XLSX.');
+      console.error('Erro ao exportar XLSX:', error);
+    }
+  };
+
   const isProfessorAlocado = (professorId) => {
     return alocacoes.some((aloc) => aloc.professor_id === professorId);
   };
@@ -217,15 +254,92 @@ const DirectorHome = () => {
     <div className="director-home">
       <header className="header">
         <h1>Sistema de Alocação - Diretor Acadêmico</h1>
-        <div className="date-info">
-          {new Date().toLocaleDateString('pt-BR', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          })}
+        <div className="header-actions">
+          <button
+            type="button"
+            className={`export-button ${showRelatorio ? 'active' : ''}`}
+            onClick={() => setShowRelatorio((value) => !value)}
+          >
+            Professores lecionando
+          </button>
+          <button type="button" className="export-button" onClick={handleExportarRelatorioXlsx}>
+            Exportar filtro XLSX
+          </button>
+          <div className="date-info">
+            {new Date().toLocaleDateString('pt-BR', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}
+          </div>
         </div>
       </header>
+
+      {showRelatorio && (
+        <section className="teaching-report">
+          <div className="teaching-report-header">
+            <div>
+              <h2>Professores lecionando</h2>
+              <span>{alocacoesRelatorio.length} alocações encontradas</span>
+            </div>
+
+            <label className="professor-filter">
+              <span>Professor</span>
+              <select
+                value={relatorioProfessorId}
+                onChange={(event) => setRelatorioProfessorId(event.target.value)}
+              >
+                <option value="">Todos os professores</option>
+                {professoresOrdenados.map((professor) => (
+                  <option key={professor.id} value={professor.id}>
+                    {professor.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="teaching-report-table-wrap">
+            <table className="teaching-report-table">
+              <thead>
+                <tr>
+                  <th>Professor</th>
+                  <th>Dia</th>
+                  <th>Sala</th>
+                  <th>Prédio</th>
+                  <th>Horário</th>
+                  <th>Matéria</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alocacoesRelatorio.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="empty-report">
+                      Nenhum professor lecionando neste filtro.
+                    </td>
+                  </tr>
+                ) : (
+                  alocacoesRelatorio.map((alocacao) => (
+                    <tr key={alocacao.id}>
+                      <td>{alocacao.professor?.nome || 'Sem professor'}</td>
+                      <td>{formatDateBR(alocacao.data)}</td>
+                      <td>{alocacao.sala?.nome || 'Sem sala'}</td>
+                      <td>{alocacao.predio || 'Sem prédio'}</td>
+                      <td>
+                        {normalizeTime(alocacao.horario_inicio)}
+                        {' às '}
+                        {normalizeTime(alocacao.horario_fim) || '-'}
+                      </td>
+                      <td>{alocacao.professor?.disciplina || 'Sem disciplina'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <main className="main-content">
         <aside className="professors-sidebar">
@@ -256,7 +370,7 @@ const DirectorHome = () => {
         <section className="rooms-section">
           <h2>Prédio 1</h2>
           <div className="rooms-grid">
-            {salas.map((sala) => {
+            {salas.filter((sala) => !sala.predio || sala.predio === 'Prédio 1').map((sala) => {
               const status = getSalaStatus(sala.id, 'Prédio 1');
               return (
                 <SalaCard
@@ -274,7 +388,7 @@ const DirectorHome = () => {
         <section className="rooms-section">
           <h2>Prédio 2</h2>
           <div className="rooms-grid">
-            {salas.map((sala) => {
+            {salas.filter((sala) => sala.predio === 'Prédio 2').map((sala) => {
               const status = getSalaStatus(sala.id, 'Prédio 2');
               return (
                 <SalaCard

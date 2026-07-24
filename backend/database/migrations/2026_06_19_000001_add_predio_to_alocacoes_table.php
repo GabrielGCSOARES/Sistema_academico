@@ -55,6 +55,13 @@ return new class extends Migration
 
     private function indexExists(string $table, string $index): bool
     {
-        return collect(DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$index]))->isNotEmpty();
+        if (DB::getDriverName() === 'sqlite') {
+            return collect(DB::select("PRAGMA index_list({$table})"))
+                ->contains(fn ($item) => ($item->name ?? null) === $index);
+        }
+
+        $table = str_replace('`', '``', $table);
+
+        return collect(DB::select("SHOW INDEX FROM `{$table}` WHERE Key_name = ?", [$index]))->isNotEmpty();
     }
 };

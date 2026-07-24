@@ -10,34 +10,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        // Criar professores de exemplo
-       
-
-        // // Criar salas de exemplo
-        // Sala::updateOrCreate(['nome' => 'Sala 101'], [
-        //     'capacidade' => 40,
-        //     'localizacao' => 'Bloco A - 1º Andar',
-        //     'ativa' => true
-        // ]);
-
-        // Sala::updateOrCreate(['nome' => 'Sala 102'], [
-        //     'capacidade' => 35,
-        //     'localizacao' => 'Bloco A - 1º Andar',
-        //     'ativa' => true
-        // ]);
-
-        // Sala::updateOrCreate(['nome' => 'Laboratório 201'], [
-        //     'capacidade' => 25,
-        //     'localizacao' => 'Bloco B - 2º Andar',
-        //     'ativa' => true
-        // ]);
-
-        // Sala::updateOrCreate(['nome' => 'Auditório'], [
-        //     'capacidade' => 100,
-        //     'localizacao' => 'Bloco C - Térreo',
-        //     'ativa' => true
-        // ]);
         $this->call([
+            DisciplinaSeeder::class,
+            DocenteSeeder::class,
             SalaSeeder::class,
         ]);
     }

@@ -11,6 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('salas')) {
+            Schema::table('salas', function (Blueprint $table) {
+                if (!Schema::hasColumn('salas', 'predio')) {
+                    $table->string('predio')->default('Prédio 1')->after('nome');
+                }
+
+                if (!Schema::hasColumn('salas', 'tipo')) {
+                    $table->string('tipo')->nullable()->after('capacidade');
+                }
+            });
+
+            return;
+        }
+
         Schema::create('salas', function (Blueprint $table) {
             $table->id();
 
@@ -22,6 +36,8 @@ return new class extends Migration
 
             $table->string('tipo')->nullable();
 
+            $table->boolean('ativa')->default(true);
+
             $table->timestamps();
         });
     }
@@ -31,6 +47,18 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('salas');
+        if (!Schema::hasTable('salas')) {
+            return;
+        }
+
+        Schema::table('salas', function (Blueprint $table) {
+            if (Schema::hasColumn('salas', 'tipo')) {
+                $table->dropColumn('tipo');
+            }
+
+            if (Schema::hasColumn('salas', 'predio')) {
+                $table->dropColumn('predio');
+            }
+        });
     }
 };

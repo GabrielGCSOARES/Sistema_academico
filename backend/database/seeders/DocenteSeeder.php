@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Docente;
+use App\Models\Professor;
 
 class DocenteSeeder extends Seeder
 {
@@ -131,11 +132,24 @@ class DocenteSeeder extends Seeder
         ];
 
         foreach ($docentes as $nome) {
-            Docente::create([
-                'nome' => $nome
-            ]);
+            $docente = Docente::updateOrCreate(
+                ['nome' => $nome],
+                ['nome' => $nome]
+            );
+
+            Professor::updateOrCreate(
+                ['id' => $docente->id],
+                [
+                    'id' => $docente->id,
+                    'nome' => $docente->nome,
+                    'email' => sprintf('professor%d@fatec.edu', $docente->id),
+                    'disciplina' => 'Sem disciplina',
+                    'curso' => 'Não informado',
+                    'ativo' => true,
+                ]
+            );
         }
 
-        $this->command->info(count($docentes) . ' docentes criados com sucesso!');
+        $this->command->info(count($docentes) . ' docentes e professores sincronizados com sucesso!');
     }
 }

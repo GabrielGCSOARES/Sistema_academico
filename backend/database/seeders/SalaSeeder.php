@@ -12,8 +12,7 @@ class SalaSeeder extends Seeder
      */
     public function run(): void
     {
-        Sala::insert([
-
+        $salas = [
             [
                 'nome' => 'Sala 0',
                 'predio' => 'Prédio 1',
@@ -188,6 +187,20 @@ class SalaSeeder extends Seeder
                 'capacidade' => 100,
                 'tipo' => 'Auditório'
             ],
-        ]);
+        ];
+
+        foreach ($salas as $sala) {
+            Sala::updateOrCreate(
+                [
+                    'nome' => $sala['nome'],
+                    'predio' => $sala['predio'],
+                ],
+                [
+                    'capacidade' => $sala['capacidade'],
+                    'tipo' => $sala['tipo'],
+                    'ativa' => true,
+                ]
+            );
+        }
     }
 }

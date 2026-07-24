@@ -19,6 +19,30 @@
   font-size: 1.8rem;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.export-button {
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.export-button:hover {
+  background: #5a67d8;
+}
+
+.export-button.active {
+  background: #2d3748;
+}
+
 .date-info {
   color: #666;
   font-size: 1rem;
@@ -27,9 +51,92 @@
 
 .main-content {
   display: flex;
-  height: calc(100vh - 80px);
+  min-height: calc(100vh - 80px);
   padding: 1.5rem;
   gap: 1.5rem;
+}
+
+.teaching-report {
+  background: white;
+  margin: 1.5rem 1.5rem 0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.teaching-report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.teaching-report-header h2 {
+  margin: 0 0 0.25rem;
+  color: #333;
+  font-size: 1.25rem;
+}
+
+.teaching-report-header span,
+.professor-filter span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.professor-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 280px;
+}
+
+.professor-filter select {
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  padding: 0.7rem 0.85rem;
+  color: #2d3748;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+.teaching-report-table-wrap {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.teaching-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 860px;
+}
+
+.teaching-report-table th {
+  position: sticky;
+  top: 0;
+  background: #667eea;
+  color: #fff;
+  text-align: left;
+  padding: 0.85rem;
+  font-weight: 700;
+}
+
+.teaching-report-table td {
+  padding: 0.8rem 0.85rem;
+  border-top: 1px solid #e2e8f0;
+  color: #2d3748;
+  vertical-align: top;
+}
+
+.teaching-report-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.empty-report {
+  text-align: center;
+  color: #718096;
 }
 
 .professors-sidebar {
@@ -109,4 +216,29 @@
 
 .retry-button:hover {
   background: #5a67d8;
+}
+
+@media (max-width: 900px) {
+  .header,
+  .teaching-report-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .professor-filter {
+    min-width: 0;
+  }
+
+  .main-content {
+    flex-direction: column;
+  }
+
+  .professors-sidebar {
+    width: auto;
+  }
 }

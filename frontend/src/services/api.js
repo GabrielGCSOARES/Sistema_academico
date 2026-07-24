@@ -45,6 +45,26 @@ export const directorService = {
   desalocarProfessor: (alocacaoId) => request(`/alocacoes/${alocacaoId}`, {
     method: 'DELETE',
   }),
+  exportarAlocacoesXlsx: async () => {
+    const response = await fetch(`${API_BASE_URL}/alocacoes/exportar-xlsx`);
+    if (!response.ok) {
+      throw new Error('Erro ao exportar XLSX');
+    }
+    return response.blob();
+  },
+  exportarProfessoresLecionandoXlsx: async (professorId) => {
+    const params = new URLSearchParams();
+    if (professorId) {
+      params.set('professor_id', professorId);
+    }
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/alocacoes/professores-lecionando/exportar-xlsx${query}`);
+    if (!response.ok) {
+      throw new Error('Erro ao exportar XLSX');
+    }
+    return response.blob();
+  },
   verificarProfessor: (professorId) => request(`/professores/${professorId}/verificar-disponibilidade`),
 };
 

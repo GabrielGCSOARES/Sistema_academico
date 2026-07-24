@@ -15,7 +15,9 @@ class Sala extends Model
         'nome',
         'predio',
         'capacidade',
-        'tipo'
+        'tipo',
+        'ativa',
+        'localizacao'
     ];
 
     public function alocacoes()
