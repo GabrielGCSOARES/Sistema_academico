@@ -120,14 +120,21 @@ class DirectorController extends Controller
 
     public function getAlocacoesSemana(Request $request)
     {
-        $inicioSemana = $request->filled('inicio')
-            ? Carbon::parse($request->inicio)->startOfDay()
-            : now()->startOfWeek(Carbon::MONDAY)->startOfDay();
-        $fimSemana = (clone $inicioSemana)->addDays(4)->endOfDay();
+        $this->sincronizarProfessoresComDocentes();
+
+        if ($request->filled('inicio')) {
+            $inicioSemana = Carbon::parse($request->inicio)->startOfDay();
+            $fimSemana = (clone $inicioSemana)->addDays(4)->endOfDay();
+        } else {
+            $inicioSemana = now()->startOfWeek(Carbon::MONDAY)->subDays(7)->startOfDay();
+            $fimSemana = (clone $inicioSemana)->addDays(21)->endOfDay();
+        }
 
         $alocacoes = Alocacao::with(['professor', 'sala'])
             ->whereIn('professor_id', Docente::query()->select('id'))
             ->whereBetween('data', [$inicioSemana->toDateString(), $fimSemana->toDateString()])
+            ->orderBy('data')
+            ->orderBy('horario_inicio')
             ->get();
 
         return response()->json($alocacoes);
@@ -745,64 +752,21 @@ XML;
                 ? date('H:i:s', strtotime($request->horario_fim))
                 : null;
 
-            // Verificar se o professor já está alocado neste intervalo
-            $professorAlocado = Alocacao::where('professor_id', $request->professor_id)
-                ->whereIn('professor_id', Docente::query()->select('id'))
-                ->where('data', $request->data)
-                ->where(function($query) use ($horarioInicio, $horarioFim) {
-                    if ($horarioFim) {
-                        $query->where('horario_inicio', '<', $horarioFim)
-                              ->where(function($q) use ($horarioInicio) {
-                                  $q->whereNull('horario_fim')
-                                    ->orWhere('horario_fim', '>', $horarioInicio);
-                              });
-                    } else {
-                        $query->where('horario_inicio', '<=', $horarioInicio)
-                              ->where(function($q) use ($horarioInicio) {
-                                  $q->whereNull('horario_fim')
-                                    ->orWhere('horario_fim', '>=', $horarioInicio);
-                              });
-                    }
-                })
-                ->lockForUpdate()
-                ->first();
-
-            if ($professorAlocado) {
-                DB::rollBack();
-                return response()->json([
-                    'message' => 'Este professor já está lecionando em outra sala neste horário.',
-                    'alocacao_atual' => $professorAlocado
-                ], 409);
-            }
-
-            // Verificar se a sala já está ocupada neste prédio e intervalo
-            $salaOcupada = Alocacao::where('sala_id', $request->sala_id)
-                ->whereIn('professor_id', Docente::query()->select('id'))
+            // Permite alocar o professor em múltiplos horários ou salas sem bloquear com erro 409
+            // Caso já exista exatamente a mesma alocação (mesmo prof, mesma sala, mesmo dia e mesmo horário inicio), reutiliza
+            $alocacaoExistente = Alocacao::where('professor_id', $request->professor_id)
+                ->where('sala_id', $request->sala_id)
                 ->where('predio', $predio)
                 ->where('data', $request->data)
-                ->where(function($query) use ($horarioInicio, $horarioFim) {
-                    if ($horarioFim) {
-                        $query->where('horario_inicio', '<', $horarioFim)
-                              ->where(function($q) use ($horarioInicio) {
-                                  $q->whereNull('horario_fim')
-                                    ->orWhere('horario_fim', '>', $horarioInicio);
-                              });
-                    } else {
-                        $query->where('horario_inicio', '<=', $horarioInicio)
-                              ->where(function($q) use ($horarioInicio) {
-                                  $q->whereNull('horario_fim')
-                                    ->orWhere('horario_fim', '>=', $horarioInicio);
-                              });
-                    }
-                })
-                ->lockForUpdate()
+                ->where('horario_inicio', $horarioInicio)
                 ->first();
 
-            if ($salaOcupada) {
-                DB::rollBack();
+            if ($alocacaoExistente) {
+                DB::commit();
                 return response()->json([
-                    'message' => 'Esta sala já está ocupada neste horário.'
-                ], 423);
+                    'message' => 'Professor alocado com sucesso.',
+                    'alocacao' => $alocacaoExistente->load(['professor', 'sala'])
+                ]);
             }
 
             // Criar a alocação
@@ -828,6 +792,135 @@ XML;
                 'message' => 'Erro ao processar alocação: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Exporta a grade de alocações de um dia da semana + turno específico.
+     *
+     * Query params:
+     *   dia_semana: 0=Segunda … 4=Sexta (índice da semana atual, padrão = semana corrente)
+     *   turno: matutino | vespertino | noturno
+     *   data: (opcional) data específica (YYYY-MM-DD)
+     */
+    public function exportarGradeDiaTurnoXlsx(Request $request)
+    {
+        $this->sincronizarProfessoresComDocentes();
+
+        // Turno → faixas de horário
+        $horariosPorTurno = [
+            'matutino'   => array_filter(self::HORARIOS_AULA, fn ($h) => $h['inicio'] < '13:00'),
+            'vespertino' => array_filter(self::HORARIOS_AULA, fn ($h) => $h['inicio'] >= '14:00' && $h['inicio'] < '19:00'),
+            'noturno'    => array_filter(self::HORARIOS_AULA, fn ($h) => $h['inicio'] >= '19:00'),
+        ];
+
+        $turno = $request->input('turno', 'matutino');
+        $horariosTurno = array_values($horariosPorTurno[$turno] ?? $horariosPorTurno['matutino']);
+
+        // Dia da semana
+        $diaSemanaIdx = (int) $request->input('dia_semana', 0); // 0=Seg…4=Sex
+        $diaSemanaIdx = max(0, min(4, $diaSemanaIdx));
+
+        if ($request->filled('data')) {
+            $dataAlvo = Carbon::parse($request->input('data'))->startOfDay();
+        } else {
+            $inicioSemana = now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+            $dataAlvo = (clone $inicioSemana)->addDays($diaSemanaIdx);
+        }
+
+        $nomeDia = self::DIAS_SEMANA[$diaSemanaIdx] ?? 'Dia';
+        $nomeTurno = ucfirst($turno);
+
+        // Buscar alocações do dia
+        $alocacoes = Alocacao::with(['professor', 'sala'])
+            ->whereIn('professor_id', Docente::query()->select('id'))
+            ->where('data', $dataAlvo->toDateString())
+            ->orderBy('horario_inicio')
+            ->get();
+
+        // Buscar todas as salas ativas
+        $salas = Sala::where('ativa', true)->orderBy('predio')->orderBy('nome')->get();
+
+        // Cabeçalho: título
+        $rows = [];
+        $titulo = "Grade {$nomeDia} - Turno {$nomeTurno} ({$dataAlvo->format('d/m/Y')})";
+
+        // Número de colunas = 1 (sala) + qtd horários do turno
+        $numCols = 1 + count($horariosTurno);
+        $tituloRow = [['value' => $titulo, 'style' => 1]];
+        for ($i = 1; $i < $numCols; $i++) {
+            $tituloRow[] = ['value' => '', 'style' => 1];
+        }
+        $rows[] = $tituloRow;
+
+        // Cabeçalho de colunas: Sala | 07:40-08:30 | ...
+        $cabRow = [['value' => 'Sala / Horário', 'style' => 2]];
+        foreach ($horariosTurno as $horario) {
+            $cabRow[] = ['value' => "{$horario['inicio']}\n{$horario['fim']}", 'style' => 2];
+        }
+        $rows[] = $cabRow;
+
+        // Linhas por sala
+        foreach ($salas as $sala) {
+            $row = [['value' => "{$sala->predio}\n{$sala->nome}", 'style' => 3]];
+
+            foreach ($horariosTurno as $horario) {
+                $conteudo = $this->formatarAlocacoesDoHorario(
+                    $alocacoes->filter(fn ($a) => $a->sala_id === $sala->id),
+                    $dataAlvo->toDateString(),
+                    $horario
+                );
+
+                $row[] = ['value' => $conteudo, 'style' => $conteudo ? 4 : 5];
+            }
+
+            $rows[] = $row;
+        }
+
+        // Construir XLSX
+        $sheetRows = $this->buildSheetRows($rows);
+        $ultimaLinha = count($rows);
+        $ultimaColuna = $this->columnName($numCols);
+
+        $colsXml = '<col min="1" max="1" width="22" customWidth="1"/>';
+        for ($c = 2; $c <= $numCols; $c++) {
+            $colsXml .= "<col min=\"{$c}\" max=\"{$c}\" width=\"36\" customWidth=\"1\"/>";
+        }
+
+        $mergeRef = "A1:{$ultimaColuna}1";
+
+        $worksheet = <<<XML
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+    <dimension ref="A1:{$ultimaColuna}{$ultimaLinha}"/>
+    <cols>
+        {$colsXml}
+    </cols>
+    <sheetData>
+        {{rows}}
+    </sheetData>
+    <mergeCells count="1"><mergeCell ref="{$mergeRef}"/></mergeCells>
+    <autoFilter ref="A2:{$ultimaColuna}{$ultimaLinha}"/>
+</worksheet>
+XML;
+
+        $worksheet = str_replace('{{rows}}', implode('', $sheetRows), $worksheet);
+
+        $filename = "grade-{$nomeDia}-{$turno}-{$dataAlvo->format('d-m-Y')}.xlsx";
+
+        return response($this->buildZipArchive([
+            '[Content_Types].xml'      => $this->contentTypesXml(),
+            '_rels/.rels'              => $this->rootRelationshipsXml(),
+            'xl/workbook.xml'          => $this->workbookXml(),
+            'xl/_rels/workbook.xml.rels' => $this->workbookRelationshipsXml(),
+            'xl/styles.xml'            => $this->stylesXml(),
+            'xl/worksheets/sheet1.xml' => $worksheet,
+        ]), 200, [
+            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+            'Pragma'              => 'no-cache',
+        ]);
     }
 
     public function desalocarProfessor($id)

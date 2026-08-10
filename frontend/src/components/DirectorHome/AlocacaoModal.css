@@ -1,188 +1,301 @@
-.modal-overlay {
+/* ───────────────────────────────────────────── */
+/*  AlocacaoModal – CSS                           */
+/* ───────────────────────────────────────────── */
+
+.alocacao-modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1400;
+  z-index: 1100;
+  padding: 16px;
+  animation: fadeInModal 0.2s ease-out;
 }
 
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.modal-header h2 {
-  margin: 0;
-  color: #333;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  cursor: pointer;
-  color: #666;
-  padding: 0;
-  line-height: 1;
-}
-
-.close-button:hover {
-  color: #333;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.professor-selected {
-  background: #f0f4ff;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-}
-
-.professor-selected h3 {
-  margin: 0;
-  color: #333;
-}
-
-.professor-selected p {
-  margin: 0.25rem 0 0 0;
-  color: #666;
-}
-
-.salas-selection h3 {
-  margin-top: 0;
-  color: #333;
-}
-
-.salas-options {
+.alocacao-modal-content {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 540px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  overflow: hidden;
+  animation: slideUpModal 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sala-option {
-  padding: 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+@keyframes slideUpModal {
+  from {
+    transform: translateY(20px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ── Header ── */
+.alocacao-modal-header {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.header-title-box h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.header-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+  display: block;
+}
+
+.alocacao-modal-close {
+  background: #e2e8f0;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #475569;
   cursor: pointer;
-  transition: all 0.3s;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.sala-option:hover:not(.indisponivel) {
-  border-color: #667eea;
-  background: #f8f9ff;
+.alocacao-modal-close:hover {
+  background: #cbd5e1;
+  color: #0f172a;
 }
 
-.sala-option.selected {
-  border-color: #667eea;
-  background: #e8f0fe;
+/* ── Body ── */
+.alocacao-modal-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.sala-option.indisponivel {
-  background: #fff5f5;
-  border-color: #ff4757;
-  cursor: not-allowed;
-  opacity: 0.7;
+.modal-state-box {
+  text-align: center;
+  padding: 30px 16px;
+  color: #64748b;
+  font-size: 14px;
 }
 
-.sala-option-header {
+.modal-state-box.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.modal-state-box.error {
+  color: #dc2626;
+  background: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fecaca;
+}
+
+/* ── Form Controls ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
 }
 
-.sala-option-header h4 {
-  margin: 0;
-  color: #333;
+.form-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
 }
 
-.disponibilidade-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: bold;
+.toggle-mode-button {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
 }
 
-.disponibilidade-badge.disponivel {
-  background: #d4edda;
-  color: #155724;
+.toggle-mode-button:hover {
+  background: #eff6ff;
+  text-decoration: underline;
 }
 
-.disponibilidade-badge.ocupado {
-  background: #f8d7da;
-  color: #721c24;
+.form-select,
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
 }
 
-.sala-option p {
-  margin: 0;
-  color: #666;
-  font-size: 0.9rem;
+.form-select:focus,
+.form-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
-.sala-bloqueada {
-  margin-top: 0.5rem;
-  text-align: center;
-  color: #ff4757;
-  font-weight: bold;
+.form-select:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
 }
 
-.modal-footer {
+.field-help-text {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── Preview Card ── */
+.vinculo-preview-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.preview-value {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.professor-name {
+  color: #1e293b;
+}
+
+.disciplina-badge {
+  color: #047857;
+  background: #ecfdf5;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #a7f3d0;
+}
+
+.preview-arrow {
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+/* ── Footer ── */
+.alocacao-modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #e0e0e0;
+  gap: 12px;
 }
 
-.cancel-button,
-.confirm-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-size: 1rem;
+.btn-modal-cancel {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
 }
 
-.cancel-button {
-  background: #f0f0f0;
-  color: #333;
-  border: 1px solid #ddd;
+.btn-modal-cancel:hover {
+  background: #f1f5f9;
+  color: #1e293b;
 }
 
-.cancel-button:hover {
-  background: #e0e0e0;
-}
-
-.confirm-button {
-  background: #667eea;
-  color: white;
+.btn-modal-confirm {
+  padding: 10px 20px;
+  border-radius: 10px;
   border: none;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
-.confirm-button:hover:not(:disabled) {
-  background: #5a67d8;
+.btn-modal-confirm:hover:not(:disabled) {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
 
-.confirm-button:disabled {
-  opacity: 0.5;
+.btn-modal-confirm:disabled {
+  background: #94a3b8;
   cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.7;
 }

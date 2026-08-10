@@ -35,7 +35,7 @@ const toMinutes = (time) => {
 const getDataSemana = (indiceDia) => {
   const hoje = new Date();
   const diaSemana = hoje.getDay();
-  const distanciaSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const distanciaSegunda = diaSemana === 0 ? 1 : 1 - diaSemana;
   const data = new Date(hoje);
   data.setDate(hoje.getDate() + distanciaSegunda + indiceDia);
 
@@ -46,14 +46,22 @@ const getDataSemana = (indiceDia) => {
   return `${ano}-${mes}-${dia}`;
 };
 
-const normalizeDate = (date) => String(date || '').slice(0, 10);
+const normalizeDate = (date) => {
+  if (!date) return '';
+  const str = String(date);
+  if (str.includes('T')) {
+    return str.split('T')[0];
+  }
+  return str.slice(0, 10);
+};
+
 const normalizeTime = (time) => String(time || '').slice(0, 5);
 const formatDateBR = (date) => {
   const [year, month, day] = normalizeDate(date).split('-');
   return `${day}/${month}/${year}`;
 };
 
-const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, onHorarioSelecionado, onDesalocar }) => {
+const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, onHorarioSelecionado, onDesalocar, onOpenVinculoModal }) => {
   const [selectedProfessorId, setSelectedProfessorId] = useState(null);
   const [periodo, setPeriodo] = useState('todos');
 
@@ -65,7 +73,7 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
     () => alocacoes
       .filter((alocacao) => (
         Number(alocacao.sala_id) === Number(sala?.id)
-        && (!alocacao.predio || alocacao.predio === predio)
+        && (!alocacao.predio || !predio || alocacao.predio === predio)
       ))
       .sort((a, b) => {
         const dataA = `${normalizeDate(a.data)} ${normalizeTime(a.horario_inicio)}`;
@@ -79,11 +87,11 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
     return null;
   }
 
-  const getAlocacaoHorario = (data, horario) => {
+  const getAlocacoesHorario = (data, horario) => {
     const inicioSlot = toMinutes(horario.inicio);
     const fimSlot = toMinutes(horario.fim);
 
-    return alocacoes.find((alocacao) => {
+    return alocacoes.filter((alocacao) => {
       const alocacaoInicio = toMinutes(normalizeTime(alocacao.horario_inicio));
       const alocacaoFim = alocacao.horario_fim
         ? toMinutes(normalizeTime(alocacao.horario_fim))
@@ -97,8 +105,8 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
     });
   };
 
-  const handleHorarioClick = (data, horario, alocacao) => {
-    if (!selectedProfessorId || alocacao) {
+  const handleHorarioClick = (data, horario) => {
+    if (!selectedProfessorId) {
       return;
     }
 
@@ -140,27 +148,53 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
         <div className="sala-modal-grid">
           <aside className="sala-modal-panel sala-modal-docentes">
             <div className="sala-modal-panel-header">
-              <h3>Docentes</h3>
+              <h3>Selecione o Professor</h3>
               <span>{professores.length}</span>
             </div>
 
             <div className="docentes-api-slot" data-api-slot="docentes">
-              {professores.map((professor) => (
-                <button
-                  className={`docente-row ${selectedProfessorId === professor.id ? 'selected' : ''}`}
-                  type="button"
-                  key={professor.id}
-                  onClick={() => setSelectedProfessorId(professor.id)}
-                >
-                  <strong>{professor.nome}</strong>
-                  <span>{professor.disciplina || 'Disciplina não informada'}</span>
-                </button>
-              ))}
+              {professores.map((professor) => {
+                const temDisciplina = professor.disciplina && professor.disciplina !== 'Sem disciplina';
+
+                return (
+                  <div  
+                    key={professor.id}
+                    className={`docente-row ${selectedProfessorId === professor.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedProfessorId(professor.id)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="docente-row-main">
+                      <strong>{professor.nome}</strong>
+                      <span className={`disciplina-subtext ${temDisciplina ? 'tem-disc' : 'sem-disc'}`}>
+                        {temDisciplina ? `📚 ${professor.disciplina}` : '⚠️ Sem disciplina vinculada'}
+                      </span>
+                    </div>
+
+                    {onOpenVinculoModal && (
+                      <button
+                        type="button"
+                        className="btn-vincular-mini"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const docId = String(professor.id).startsWith('docente-')
+                            ? Number(String(professor.id).replace('docente-', ''))
+                            : Number(professor.id);
+                          onOpenVinculoModal(docId);
+                        }}
+                        title="Atribuir ou cadastrar disciplina"
+                      >
+                        {temDisciplina ? '✏️' : '➕'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="alocacoes-sala">
               <div className="alocacoes-sala-header">
-                <h3>Alocações da sala</h3>
+                <h3>Alocações desta sala</h3>
                 <span>{alocacoesDaSala.length}</span>
               </div>
 
@@ -172,6 +206,7 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
                     <article className="alocacao-row" key={alocacao.id}>
                       <div>
                         <strong>{alocacao.professor?.nome || 'Professor'}</strong>
+                        <span className="aloc-disc-tag">{alocacao.professor?.disciplina || ''}</span>
                         <span>
                           {formatDateBR(alocacao.data)} · {normalizeTime(alocacao.horario_inicio)}
                           {alocacao.horario_fim ? ` às ${normalizeTime(alocacao.horario_fim)}` : ''}
@@ -190,8 +225,8 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
           <section className="sala-modal-panel sala-modal-horarios">
             <div className="sala-modal-panel-header">
               <div>
-                <h3>Horários das aulas</h3>
-                <span>Seg. a Sex.</span>
+                <h3>Horários das Aulas</h3>
+                <span>Selecione um professor e clique no horário para inserir</span>
               </div>
               <div className="periodo-filter" aria-label="Filtro de período">
                 {PERIODOS.map((item) => (
@@ -213,40 +248,59 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
                   const data = getDataSemana(indiceDia);
 
                   return (
-                  <div className="dia-coluna" key={dia}>
-                    <h4>{dia}</h4>
-                    <div className="horarios-lista">
-                      {horariosAula.map((horario) => {
-                        const alocacao = getAlocacaoHorario(data, horario);
-                        const professorNome = alocacao?.professor?.nome || 'Professor';
+                    <div className="dia-coluna" key={dia}>
+                      <h4>{dia}</h4>
+                      <div className="horarios-lista">
+                        {horariosAula.map((horario) => {
+                          const alocacoesSlot = getAlocacoesHorario(data, horario);
 
-                        if (alocacao) {
+                          if (alocacoesSlot.length > 0) {
+                            return (
+                              <article className="horario-bloco ocupado" key={`${dia}-${horario.id}`}>
+                                {alocacoesSlot.map((aloc) => (
+                                  <div key={aloc.id} className="alocacao-item-sub">
+                                    <strong>{aloc.professor?.nome || 'Professor'}</strong>
+                                    {aloc.professor?.disciplina && (
+                                      <span className="bloco-disciplina">{aloc.professor.disciplina}</span>
+                                    )}
+                                    <button 
+                                      type="button" 
+                                      className="btn-retirar-micro"
+                                      onClick={() => handleDesalocarClick(aloc.id)}
+                                    >
+                                      Retirar
+                                    </button>
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  className="btn-inserir-novamente"
+                                  onClick={() => handleHorarioClick(data, horario)}
+                                  disabled={!selectedProfessorId}
+                                  title={selectedProfessorId ? 'Clique para inserir o professor novamente neste horário' : 'Selecione um professor'}
+                                >
+                                  ➕ Inserir neste horário
+                                </button>
+                              </article>
+                            );
+                          }
+
                           return (
-                            <article className="horario-bloco ocupado" key={`${dia}-${horario.id}`}>
-                              <strong>{professorNome}</strong>
-                              <span>Ocupado</span>
-                              <button type="button" onClick={() => handleDesalocarClick(alocacao.id)}>
-                                Retirar
-                              </button>
-                            </article>
+                            <button
+                              className="horario-bloco"
+                              type="button"
+                              key={`${dia}-${horario.id}`}
+                              onClick={() => handleHorarioClick(data, horario)}
+                              disabled={!selectedProfessorId}
+                              title={selectedProfessorId ? 'Clique para alocar neste horário' : 'Selecione um professor primeiro'}
+                            >
+                              <span>{horario.inicio}</span>
+                              <span>{horario.fim}</span>
+                            </button>
                           );
-                        }
-
-                        return (
-                          <button
-                            className="horario-bloco"
-                            type="button"
-                            key={`${dia}-${horario.id}`}
-                            onClick={() => handleHorarioClick(data, horario, alocacao)}
-                            disabled={!selectedProfessorId}
-                          >
-                            <span>{horario.inicio}</span>
-                            <span>{horario.fim}</span>
-                          </button>
-                        );
-                      })}
+                        })}
+                      </div>
                     </div>
-                  </div>
                   );
                 })}
               </div>

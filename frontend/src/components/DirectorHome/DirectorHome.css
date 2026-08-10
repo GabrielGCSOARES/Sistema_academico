@@ -39,6 +39,17 @@
   background: #5a67d8;
 }
 
+.export-button--highlight {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.export-button--highlight:hover {
+  background: linear-gradient(135deg, #5a6dd8 0%, #6a3d90 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.5);
+}
+
 .export-button.active {
   background: #2d3748;
 }

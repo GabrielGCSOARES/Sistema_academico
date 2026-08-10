@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import ProfessorCard from './ProfessorCard';
 import SalaCard from './SalaCard';
-import AlocacaoModal from './AlocacaoModal';
 import SalaHorarioModal from './SalaHorarioModal';
-import DocenteDisciplinaModal from './DocenteDisciplinaModal';
+import AlocacaoModal from './AlocacaoModal';
+import ExportModal from './ExportModal';
 import { directorService } from '../../services/api';
 import './DirectorHome.css';
 
@@ -13,16 +13,14 @@ const DirectorHome = () => {
   const [alocacoes, setAlocacoes] = useState([]);
   const [alocacoesSemana, setAlocacoesSemana] = useState([]);
 
-  const [selectedProfessor, setSelectedProfessor] = useState(null);
   const [selectedDocenteId, setSelectedDocenteId] = useState(null);
-
   const [selectedSalaDetails, setSelectedSalaDetails] = useState(null);
 
-  const [showModal, setShowModal] = useState(false);
   const [showVinculoModal, setShowVinculoModal] = useState(false);
   const [showRelatorio, setShowRelatorio] = useState(false);
   const [relatorioProfessorId, setRelatorioProfessorId] = useState('');
   const [pendingAlocacao, setPendingAlocacao] = useState(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,27 +29,35 @@ const DirectorHome = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
-    try {
+  const loadData = async (showLoading = true) => {
+  try {
+    if (showLoading) {
       setLoading(true);
+    }
 
-      const [profResponse, salasResponse, alocResponse, alocSemanaResponse] = await Promise.all([
-        directorService.getProfessores(),
-        directorService.getSalas(),
-        directorService.getAlocacoesAtuais(),
-        directorService.getAlocacoesSemana()
-      ]);
+    const [profResponse, salasResponse, alocResponse, alocSemanaResponse, discResponse, docResponse] = await Promise.all([
+      directorService.getProfessores(),
+      directorService.getSalas(),
+      directorService.getAlocacoesAtuais(),
+      directorService.getAlocacoesSemana(),
+      directorService.getDisciplinas(),
+      directorService.getDocentes(),
+    ]);
 
-      setProfessores(profResponse?.data || []);
-      setSalas(salasResponse?.data || []);
-      setAlocacoes(alocResponse?.data || []);
-      setAlocacoesSemana(alocSemanaResponse?.data || []);
-      setError(null);
-    } catch (err) {
-      setError('Erro ao carregar dados. Verifique a conexão com o servidor.');
-      console.error('Erro ao carregar dados:', err);
-    } finally {
+    setProfessores(profResponse?.data || []);
+    setSalas(salasResponse?.data || []);
+    setAlocacoes(alocResponse?.data || []);
+    setAlocacoesSemana(alocSemanaResponse?.data || []);
+    setDisciplinas(discResponse?.data || []);
+    setDocentes(docResponse?.data || []);
+    setError(null);
+  } catch (err) {
+    setError('Erro ao carregar dados. Verifique a conexão com o servidor.');
+    console.error('Erro ao carregar dados:', err);
+  } finally {
+    if (showLoading) {
       setLoading(false);
+      }
     }
   };
 
@@ -73,8 +79,8 @@ const DirectorHome = () => {
   };
 
   const professoresOrdenados = [...professores].sort((a, b) => {
-    const aTem = Boolean(a.disciplina);
-    const bTem = Boolean(b.disciplina);
+    const aTem = Boolean(a.disciplina && a.disciplina !== 'Sem disciplina');
+    const bTem = Boolean(b.disciplina && b.disciplina !== 'Sem disciplina');
     if (aTem === bTem) return a.nome.localeCompare(b.nome);
     return aTem ? -1 : 1;
   });
@@ -103,13 +109,11 @@ const DirectorHome = () => {
     setPendingAlocacao(null);
   };
 
-  const handleProfessorSelect = (professor) => {
-    setSelectedProfessor(professor);
-    setShowModal(true);
-  };
-
   const openVinculoModalParaDocente = (docenteId) => {
-    setSelectedDocenteId(docenteId);
+    const numericId = String(docenteId).startsWith('docente-')
+      ? Number(String(docenteId).replace('docente-', ''))
+      : Number(docenteId);
+    setSelectedDocenteId(numericId);
     setShowVinculoModal(true);
   };
 
@@ -117,39 +121,34 @@ const DirectorHome = () => {
     setSelectedSalaDetails({ sala, predio });
   };
 
-  const handleHorarioSelecionado = ({ professorId, salaId, predio, data, horarioInicio, horarioFim }) => {
+  const handleHorarioSelecionado = async ({ professorId, salaId, predio, data, horarioInicio, horarioFim }) => {
     const docenteId = String(professorId).startsWith('docente-')
       ? Number(String(professorId).replace('docente-', ''))
       : Number(professorId);
 
-    setPendingAlocacao({ professorId: docenteId, salaId, predio, data, horarioInicio, horarioFim });
-    setSelectedDocenteId(docenteId);
-    setShowVinculoModal(true);
-  };
+    const professor = professores.find(
+      (p) => Number(p.id) === docenteId || String(p.id) === `docente-${docenteId}`
+    );
 
-  const handleAlocacao = async (salaId) => {
-    try {
-      await directorService.alocarProfessor({
-        professor_id: selectedProfessor.id,
-        sala_id: salaId,
-        data: new Date().toISOString().split('T')[0],
-        horario_atual: new Date().toLocaleTimeString()
+    const temDisciplina =
+      professor &&
+      professor.disciplina &&
+      professor.disciplina !== 'Sem disciplina' &&
+      professor.disciplina !== 'Disciplina não informada';
+
+    if (!temDisciplina) {
+      setPendingAlocacao({ professorId: docenteId, salaId, predio, data, horarioInicio, horarioFim });
+      setSelectedDocenteId(docenteId);
+      setShowVinculoModal(true);
+    } else {
+      await handleHorarioAlocacao({
+        professorId: docenteId,
+        salaId,
+        predio,
+        data,
+        horarioInicio,
+        horarioFim
       });
-
-      await loadData();
-      setShowModal(false);
-      setSelectedProfessor(null);
-
-      alert('Professor alocado com sucesso!');
-    } catch (error) {
-      if (error.response && error.response.status === 409) {
-        alert('Este professor já está lecionando em outra sala neste horário.');
-      } else if (error.response && error.response.status === 423) {
-        alert('Esta sala já está ocupada neste horário.');
-      } else {
-        alert('Erro ao alocar professor. Tente novamente.');
-      }
-      console.error('Erro na alocação:', error);
     }
   };
 
@@ -182,12 +181,30 @@ const DirectorHome = () => {
     if (window.confirm('Tem certeza que deseja remover esta alocação?')) {
       try {
         await directorService.desalocarProfessor(alocacaoId);
-        await loadData();
-        alert('Professor retirado com sucesso!');
+        await loadData(false);
       } catch (error) {
         alert('Erro ao retirar professor.');
         console.error('Erro ao retirar professor:', error);
       }
+    }
+  };
+
+  // ── Redefinir (remover) disciplina do professor ──
+  const handleResetDisciplina = async (professorId) => {
+    const docenteId = String(professorId).startsWith('docente-')
+      ? Number(String(professorId).replace('docente-', ''))
+      : Number(professorId);
+
+    try {
+      await directorService.desvincularDocenteDisciplina(docenteId);
+      atualizarProfessor(docenteId, 'Sem disciplina');
+      await loadData(false);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        'Não foi possível remover a disciplina do professor.';
+      alert(msg);
+      throw err;
     }
   };
 
@@ -208,21 +225,20 @@ const DirectorHome = () => {
     }
   };
 
-  const isProfessorAlocado = (professorId) => {
-    return alocacoes.some((aloc) => aloc.professor_id === professorId);
-  };
-
   const getSalaStatus = (salaId, predio) => {
-    const alocacao = alocacoes.find(
-      (aloc) =>
-        Number(aloc.sala_id) === Number(salaId) && (!aloc.predio || aloc.predio === predio)
-    );
+    const alocacao =
+      alocacoesSemana.find(
+        (aloc) => Number(aloc.sala_id) === Number(salaId) && (!aloc.predio || aloc.predio === predio)
+      ) ||
+      alocacoes.find(
+        (aloc) => Number(aloc.sala_id) === Number(salaId) && (!aloc.predio || aloc.predio === predio)
+      );
 
     if (alocacao) {
-      const professor = professores.find((p) => p.id === alocacao.professor_id);
+      const professor = professores.find((p) => Number(p.id) === Number(alocacao.professor_id));
       return {
         ocupada: true,
-        professor: professor?.nome || 'Ocupada',
+        professor: alocacao.professor?.nome || professor?.nome || 'Ocupada',
         alocacaoId: alocacao.id
       };
     }
@@ -253,7 +269,7 @@ const DirectorHome = () => {
   return (
     <div className="director-home">
       <header className="header">
-        <h1>Sistema de Alocação - Diretor Acadêmico</h1>
+        <h1>Sistema de Alocação - Fatec Tatuí</h1>
         <div className="header-actions">
           <button
             type="button"
@@ -262,8 +278,8 @@ const DirectorHome = () => {
           >
             Professores lecionando
           </button>
-          <button type="button" className="export-button" onClick={handleExportarRelatorioXlsx}>
-            Exportar filtro XLSX
+          <button type="button" className="export-button export-button--highlight" onClick={() => setShowExportModal(true)}>
+            ⬇ Exportar XLSX
           </button>
           <div className="date-info">
             {new Date().toLocaleDateString('pt-BR', {
@@ -343,25 +359,15 @@ const DirectorHome = () => {
 
       <main className="main-content">
         <aside className="professors-sidebar">
-          <h2>Professores</h2>
+          <h2>Professores (Atribuir Disciplina)</h2>
           
           <div className="professors-list">
             {professoresOrdenados.map((professor) => (
               <ProfessorCard
                 key={professor.id}
                 professor={professor}
-                isAlocado={isProfessorAlocado(professor.id)}
-                onSelect={() => {
-                  if (isProfessorAlocado(professor.id)) return;
-
-                  if (String(professor.id).startsWith('docente-')) {
-                    const docenteId = Number(String(professor.id).replace('docente-', ''));
-                    openVinculoModalParaDocente(docenteId);
-                    return;
-                  }
-
-                  handleProfessorSelect(professor);
-                }}
+                onOpenModal={openVinculoModalParaDocente}
+                onResetDisciplina={handleResetDisciplina}
               />
             ))}
           </div>
@@ -404,38 +410,25 @@ const DirectorHome = () => {
         </section>
       </main>
 
-      {showModal && selectedProfessor && (
-        <AlocacaoModal
-          professor={selectedProfessor}
-          salas={salas}
-          alocacoes={alocacoes}
-          onClose={() => {
-            setShowModal(false);
-            setSelectedProfessor(null);
-          }}
-          onAlocar={handleAlocacao}
-        />
-      )}
-
       {showVinculoModal && (
-        <DocenteDisciplinaModal
+        <AlocacaoModal
           onClose={closeVinculoModal}
           onSaved={async (dados) => {
             atualizarProfessor(dados.docente_id, dados.disciplina_nome);
 
             if (pendingAlocacao) {
+              const aloc = pendingAlocacao;
+              closeVinculoModal();
               await handleHorarioAlocacao({
-                ...pendingAlocacao,
+                ...aloc,
                 professorId: Number(dados.docente_id),
               });
-              closeVinculoModal();
-              setSelectedSalaDetails(null);
               return;
             }
-
-            await loadData();
+          
+            await loadData(false);
             closeVinculoModal();
-          }}
+          }}     
           selectedDocenteId={selectedDocenteId}
         />
       )}
@@ -448,7 +441,18 @@ const DirectorHome = () => {
           alocacoes={alocacoesSemana}
           onHorarioSelecionado={handleHorarioSelecionado}
           onDesalocar={handleDesalocar}
+          onOpenVinculoModal={openVinculoModalParaDocente}
           onClose={() => setSelectedSalaDetails(null)}
+        />
+      )}
+
+      {showExportModal && (
+        <ExportModal
+          onClose={() => setShowExportModal(false)}
+          onExportProfessor={handleExportarRelatorioXlsx}
+          professores={professoresOrdenados}
+          relatorioProfessorId={relatorioProfessorId}
+          setRelatorioProfessorId={setRelatorioProfessorId}
         />
       )}
     </div>

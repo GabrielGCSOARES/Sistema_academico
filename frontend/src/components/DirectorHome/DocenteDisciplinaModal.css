@@ -1,37 +1,243 @@
-.docente-disciplina-modal select{
-  width:100%;
-}
-
-.docente-disciplina-modal .field{
-  display:flex;
-  flex-direction:column;
-  gap:0.35rem;
-  margin-bottom:1rem;
-}
-
-.docente-disciplina-modal label{
-  font-size:0.9rem;
-  color:#333;
-}
-
-.docente-disciplina-modal select{
-  padding:0.6rem 0.7rem;
-  border-radius:8px;
-  border:1px solid #ddd;
-}
-
-.error-text{
-  color:#b42318;
-}
-
 .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 1600;
+  padding: 1rem;
 }
 
 .modal-content {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 92%;
+  max-width: 540px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
   position: relative;
   z-index: 1601;
+  animation: modalFadeIn 0.2s ease-out;
 }
 
-/* reusa classes do AlocacaoModal.css (modal-overlay/modal-content/modal-header etc.) */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.close-button:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.docente-disciplina-modal .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.2rem;
+}
+
+.docente-disciplina-modal label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.docente-disciplina-modal select {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  font-size: 0.95rem;
+  color: #1e293b;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.docente-disciplina-modal select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.docente-disciplina-modal select:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.preview-vinculo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  margin: 1.25rem 0;
+  gap: 0.5rem;
+}
+
+.docente-preview-nome {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.preview-vinculo .arrow {
+  color: #0284c7;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.badge-disciplina {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.cancel-button {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-button:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.confirm-button {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirm-button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.confirm-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.label-with-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.2rem;
+}
+
+.toggle-criacao-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #2563eb;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-criacao-btn:hover {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.input-nova-disciplina {
+  width: 100%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  border: 1.5px solid #3b82f6;
+  background-color: #ffffff;
+  font-size: 0.95rem;
+  color: #1e293b;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-nova-disciplina:focus {
+  outline: none;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+}
+
+.loading-text {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+
 

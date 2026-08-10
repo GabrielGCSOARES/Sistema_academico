@@ -20,12 +20,15 @@ Route::middleware('api')->group(function () {
     Route::get('/disciplinas', [DocenteDisciplinaController::class, 'listarDisciplinas']);
     Route::get('/docentes', [DocenteDisciplinaController::class, 'listarDocentes']);
     Route::post('/docentes/vincular-disciplina', [DocenteDisciplinaController::class, 'vincular']);
+    Route::post('/docentes/vincular-disciplina', [DocenteDisciplinaController::class, 'vincular']);
+    Route::delete('/docentes/{id}/disciplina', [DocenteDisciplinaController::class, 'remover']); 
 
     Route::get('/salas', [DirectorController::class, 'getSalas']);
     Route::get('/alocacoes/atuais', [DirectorController::class, 'getAlocacoesAtuais']);
     Route::get('/alocacoes/semana', [DirectorController::class, 'getAlocacoesSemana']);
     Route::get('/alocacoes/exportar-xlsx', [DirectorController::class, 'exportarXlsx']);
     Route::get('/alocacoes/professores-lecionando/exportar-xlsx', [DirectorController::class, 'exportarProfessoresLecionandoXlsx']);
+    Route::get('/alocacoes/grade/exportar-xlsx', [DirectorController::class, 'exportarGradeDiaTurnoXlsx']);
     Route::post('/alocacoes', [DirectorController::class, 'alocarProfessor']);
     Route::delete('/alocacoes/{id}', [DirectorController::class, 'desalocarProfessor']);
     Route::get('/professores/{id}/verificar-disponibilidade', [DirectorController::class, 'verificarProfessor']);

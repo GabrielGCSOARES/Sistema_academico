@@ -32,6 +32,9 @@ export const directorService = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  desvincularDocenteDisciplina: (docenteId) => request(`/docentes/${docenteId}/disciplina`, {
+    method: 'DELETE',
+  }),
   getSalas: () => request('/salas'),
 
   getHorariosAulas: () => request('/horarios-aulas'),

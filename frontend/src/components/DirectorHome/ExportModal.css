@@ -1,0 +1,242 @@
+/* ExportModal.css – Modal premium para exportação XLSX */
+
+.export-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 30, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  animation: overlayFadeIn 0.2s ease;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.export-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 2rem;
+  width: min(520px, 94vw);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(102, 126, 234, 0.15);
+  position: relative;
+  animation: modalSlideUp 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(32px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.export-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.export-modal-close:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+/* ── Header ── */
+.export-modal-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+.export-modal-icon {
+  font-size: 2.4rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.export-modal-header h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+.export-modal-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* ── Mode selection cards ── */
+.export-mode-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.export-mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
+  text-align: center;
+}
+.export-mode-card:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+}
+.mode-card-icon {
+  font-size: 2rem;
+}
+.export-mode-card strong {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+.export-mode-card span {
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* ── Form inside modal ── */
+.export-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+.export-form h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.export-back-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.export-back-btn:hover { opacity: 0.7; }
+
+.export-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.export-field > span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.export-field select {
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.95rem;
+  color: #1e293b;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.export-field select:focus {
+  border-color: #667eea;
+}
+
+/* ── Turno pills ── */
+.turno-pills {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.turno-pill {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.7rem 0.6rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.turno-pill strong { font-size: 0.85rem; color: #334155; }
+.turno-pill small  { font-size: 0.72rem; color: #94a3b8; }
+.turno-pill:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+.turno-pill.active {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.turno-pill.active strong,
+.turno-pill.active small {
+  color: #fff;
+}
+
+/* ── Hint text ── */
+.export-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  line-height: 1.5;
+}
+
+/* ── Confirm button ── */
+.export-confirm-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.85rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  letter-spacing: 0.02em;
+}
+.export-confirm-btn:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.export-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Responsive ── */
+@media (max-width: 500px) {
+  .export-mode-cards { grid-template-columns: 1fr; }
+  .turno-pills { flex-direction: column; }
+}
