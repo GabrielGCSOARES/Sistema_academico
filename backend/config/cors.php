@@ -15,7 +15,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000'],
+    // Durante desenvolvimento, permitir todas as origens evita bloqueios CORS
+    // Em produção, restrinja para domínios confiáveis.
+    'allowed_origins' => ['*'],
 
     'allowed_origins_patterns' => [],
 

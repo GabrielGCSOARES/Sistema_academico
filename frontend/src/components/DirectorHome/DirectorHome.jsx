@@ -13,6 +13,9 @@ const DirectorHome = () => {
   const [alocacoes, setAlocacoes] = useState([]);
   const [alocacoesSemana, setAlocacoesSemana] = useState([]);
 
+  const [disciplinas, setDisciplinas] = useState([]);
+  const [docentes, setDocentes] = useState([]);
+
   const [selectedDocenteId, setSelectedDocenteId] = useState(null);
   const [selectedSalaDetails, setSelectedSalaDetails] = useState(null);
 

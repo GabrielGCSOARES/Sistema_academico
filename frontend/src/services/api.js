@@ -10,10 +10,18 @@ const request = async (path, options = {}) => {
   });
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      // resposta não é JSON (HTML de erro ou texto simples) — manter raw para diagnóstico
+      data = { _raw: text };
+    }
+  }
 
   if (!response.ok) {
-    const error = new Error(data?.message || 'Erro na requisicao');
+    const error = new Error((data && data.message) || 'Erro na requisicao');
     error.response = {
       status: response.status,
       data,
