@@ -56,6 +56,11 @@ const normalizeDate = (date) => {
 };
 
 const normalizeTime = (time) => String(time || '').slice(0, 5);
+const professorTemDisciplina = (professor) => Boolean(
+  professor?.disciplina
+  && professor.disciplina !== 'Sem disciplina'
+  && professor.disciplina !== 'Disciplina não informada'
+);
 const formatDateBR = (date) => {
   const [year, month, day] = normalizeDate(date).split('-');
   return `${day}/${month}/${year}`;
@@ -86,6 +91,11 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
   if (!sala) {
     return null;
   }
+
+  const professorSelecionado = professores.find(
+    (professor) => String(professor.id) === String(selectedProfessorId)
+  );
+  const podeAlocar = professorTemDisciplina(professorSelecionado);
 
   const getAlocacoesHorario = (data, horario) => {
     const inicioSlot = toMinutes(horario.inicio);
@@ -154,7 +164,7 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
 
             <div className="docentes-api-slot" data-api-slot="docentes">
               {professores.map((professor) => {
-                const temDisciplina = professor.disciplina && professor.disciplina !== 'Sem disciplina';
+                const temDisciplina = professorTemDisciplina(professor);
 
                 return (
                   <div  
@@ -226,7 +236,11 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
             <div className="sala-modal-panel-header">
               <div>
                 <h3>Horários das Aulas</h3>
-                <span>Selecione um professor e clique no horário para inserir</span>
+                <span>
+                  {selectedProfessorId && !podeAlocar
+                    ? 'Vincule uma disciplina ao professor selecionado para liberar os horários'
+                    : 'Selecione um professor com disciplina e clique no horário para inserir'}
+                </span>
               </div>
               <div className="periodo-filter" aria-label="Filtro de período">
                 {PERIODOS.map((item) => (
@@ -242,7 +256,18 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
               </div>
             </div>
 
-            <div className="horarios-api-slot" data-api-slot="horarios-aulas">
+            <div
+              className={`horarios-api-slot ${!podeAlocar ? 'horarios-bloqueados' : ''}`}
+              data-api-slot="horarios-aulas"
+              aria-disabled={!podeAlocar}
+            >
+              {!podeAlocar && (
+                <p className="horarios-bloqueados-aviso">
+                  {selectedProfessorId
+                    ? 'Este professor ainda não possui disciplina vinculada.'
+                    : 'Selecione um professor com disciplina para liberar a grade.'}
+                </p>
+              )}
               <div className="dias-semana-grid">
                 {DIAS_SEMANA.map((dia, indiceDia) => {
                   const data = getDataSemana(indiceDia);
@@ -276,8 +301,8 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
                                   type="button"
                                   className="btn-inserir-novamente"
                                   onClick={() => handleHorarioClick(data, horario)}
-                                  disabled={!selectedProfessorId}
-                                  title={selectedProfessorId ? 'Clique para inserir o professor novamente neste horário' : 'Selecione um professor'}
+                                  disabled={!podeAlocar}
+                                  title={podeAlocar ? 'Clique para inserir o professor neste horário' : 'Selecione um professor com disciplina'}
                                 >
                                   ➕ Inserir neste horário
                                 </button>
@@ -291,8 +316,8 @@ const SalaHorarioModal = ({ sala, predio, professores, alocacoes = [], onClose, 
                               type="button"
                               key={`${dia}-${horario.id}`}
                               onClick={() => handleHorarioClick(data, horario)}
-                              disabled={!selectedProfessorId}
-                              title={selectedProfessorId ? 'Clique para alocar neste horário' : 'Selecione um professor primeiro'}
+                              disabled={!podeAlocar}
+                              title={podeAlocar ? 'Clique para alocar neste horário' : 'Selecione um professor com disciplina'}
                             >
                               <span>{horario.inicio}</span>
                               <span>{horario.fim}</span>

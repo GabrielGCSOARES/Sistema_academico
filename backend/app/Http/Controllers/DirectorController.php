@@ -806,6 +806,10 @@ XML;
     {
         $this->sincronizarProfessoresComDocentes();
 
+        // Esta rota era usada pela antiga exportação por turno. A exportação agora
+        // sempre deve conter a grade completa de segunda a sexta, com todos os horários.
+        return $this->exportarXlsx();
+
         // Turno → faixas de horário
         $horariosPorTurno = [
             'matutino'   => array_filter(self::HORARIOS_AULA, fn ($h) => $h['inicio'] < '13:00'),

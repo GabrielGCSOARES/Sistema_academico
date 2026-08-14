@@ -30,8 +30,16 @@ class DocenteDisciplinaController extends Controller
         ]);
 
         if ($request->filled('disciplina_nome')) {
+            $nomeDisciplina = preg_replace('/\s+/', ' ', trim($request->string('disciplina_nome')->toString()));
+
+            if ($nomeDisciplina === '') {
+                return response()->json([
+                    'message' => 'Informe o nome da nova disciplina.'
+                ], 422);
+            }
+
             $disciplina = Disciplina::firstOrCreate([
-                'nome' => trim($request->disciplina_nome)
+                'nome' => $nomeDisciplina
             ]);
             $disciplinaId = $disciplina->id;
         } else if ($request->filled('disciplina_id')) {
@@ -91,5 +99,4 @@ class DocenteDisciplinaController extends Controller
         ]);
     }
 }
-
 

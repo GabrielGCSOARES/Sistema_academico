@@ -131,8 +131,31 @@
 
 .docentes-api-slot,
 .horarios-api-slot {
+  position: relative;
+  isolation: isolate;
   min-height: 0;
   overflow: auto;
+}
+
+.horarios-bloqueados-aviso {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  width: fit-content;
+  max-width: calc(100% - 1.5rem);
+  margin: 0.75rem auto -0.25rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #fcd34d;
+  border-radius: 7px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.horarios-bloqueados .dias-semana-grid {
+  opacity: 0.52;
 }
 
 .docentes-api-slot {
@@ -421,6 +444,8 @@
 }
 
 .horario-bloco {
+  box-sizing: border-box;
+  min-width: 0;
   min-height: 58px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -451,9 +476,12 @@
   border-color: #fecdd3;
   color: #7f1d1d;
   opacity: 1;
+  padding: 0.55rem;
+  overflow: hidden;
 }
 
 .horario-bloco.ocupado strong {
+  display: block;
   font-size: 0.82rem;
   line-height: 1.15;
   max-width: 100%;
@@ -467,8 +495,32 @@
   text-transform: uppercase;
 }
 
+.alocacao-item-sub {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.alocacao-item-sub strong,
+.alocacao-item-sub .bloco-disciplina {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .horario-bloco.ocupado button {
   margin-top: 0.15rem;
+}
+
+.horario-bloco.ocupado .btn-inserir-novamente {
+  border: 0;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.horario-bloco.ocupado .btn-inserir-novamente:hover:not(:disabled) {
+  background: #1d4ed8;
 }
 
 .horario-bloco span + span::before {
