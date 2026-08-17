@@ -15,6 +15,9 @@ use App\Http\Controllers\DocenteDisciplinaController;
 Route::middleware('api')->group(function () {
     // Rotas para o diretor acadêmico
     Route::get('/professores', [DirectorController::class, 'getProfessores']);
+    Route::post('/professores', [DirectorController::class, 'criarProfessor']);
+    Route::put('/professores/{id}', [DirectorController::class, 'editarProfessor']);
+    Route::delete('/professores/{id}', [DirectorController::class, 'excluirProfessor']);
 
     // Vínculo docente → disciplina
     Route::get('/disciplinas', [DocenteDisciplinaController::class, 'listarDisciplinas']);
@@ -25,6 +28,7 @@ Route::middleware('api')->group(function () {
     Route::get('/salas', [DirectorController::class, 'getSalas']);
     Route::get('/alocacoes/atuais', [DirectorController::class, 'getAlocacoesAtuais']);
     Route::get('/alocacoes/semana', [DirectorController::class, 'getAlocacoesSemana']);
+    Route::get('/alocacoes/consulta-aluno', [DirectorController::class, 'consultarAlocacoesAluno']);
     Route::get('/alocacoes/exportar-xlsx', [DirectorController::class, 'exportarXlsx']);
     Route::get('/alocacoes/professores-lecionando/exportar-xlsx', [DirectorController::class, 'exportarProfessoresLecionandoXlsx']);
     Route::get('/alocacoes/grade/exportar-xlsx', [DirectorController::class, 'exportarGradeDiaTurnoXlsx']);

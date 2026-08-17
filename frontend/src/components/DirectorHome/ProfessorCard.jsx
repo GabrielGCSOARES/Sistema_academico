@@ -5,6 +5,8 @@ const ProfessorCard = ({
     professor,
     onOpenModal,
     onResetDisciplina,
+    onEditProfessor,
+    onDeleteProfessor,
 }) => {
     const disciplina =
         professor.disciplina ||
@@ -23,6 +25,24 @@ const ProfessorCard = ({
                 await onResetDisciplina(professor.id);
             } catch (err) {
                 console.error("Erro ao retirar atribuição:", err);
+            }
+        }
+    };
+
+    const handleEdit = (e) => {
+        e.stopPropagation();
+        if (onEditProfessor) {
+            onEditProfessor(professor);
+        }
+    };
+
+    const handleDelete = async (e) => {
+        e.stopPropagation();
+        if (window.confirm(`Tem certeza que deseja excluir o professor "${professor.nome}"?\n\nTodas as alocações deste professor também serão removidas do sistema.`)) {
+            try {
+                await onDeleteProfessor(professor.id);
+            } catch (err) {
+                console.error("Erro ao excluir professor:", err);
             }
         }
     };
@@ -62,6 +82,27 @@ const ProfessorCard = ({
                         </div>
                     )}
                 </div>
+
+                <div className="professor-card-top-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                        type="button"
+                        className="btn-card-icon btn-card-edit"
+                        onClick={handleEdit}
+                        title="Editar nome do professor"
+                        aria-label="Editar nome"
+                    >
+                        ✏️
+                    </button>
+                    <button
+                        type="button"
+                        className="btn-card-icon btn-card-delete"
+                        onClick={handleDelete}
+                        title="Excluir professor"
+                        aria-label="Excluir professor"
+                    >
+                        🗑️
+                    </button>
+                </div>
             </div>
 
             <div className="professor-card-actions" onClick={(e) => e.stopPropagation()}>
@@ -76,7 +117,7 @@ const ProfessorCard = ({
                             }}
                             title="Alterar disciplina atribuída via modal"
                         >
-                            ✏️ Alterar Disciplina
+                            📚 Alterar Disciplina
                         </button>
                         <button
                             type="button"

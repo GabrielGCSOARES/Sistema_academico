@@ -8,6 +8,8 @@ services:
     restart: unless-stopped
     ports:
       - "3000:80"
+    volumes:
+      - ./frontend/build:/usr/share/nginx/html:ro
     depends_on:
       - backend
     networks:

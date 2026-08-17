@@ -140,6 +140,52 @@ class DirectorController extends Controller
         return response()->json($alocacoes);
     }
 
+    /**
+     * Retorna os horários de uma disciplina ministrada por um professor.
+     *
+     * A disciplina é validada pelo vínculo do docente antes da busca das
+     * alocações. Assim, a tela do aluno não precisa carregar a agenda inteira
+     * para encontrar uma combinação de professor e disciplina.
+     */
+    public function consultarAlocacoesAluno(Request $request)
+    {
+        $dados = $request->validate([
+            'professor_id' => ['required', 'integer', 'exists:docentes,id'],
+            'disciplina_id' => ['required', 'integer', 'exists:disciplinas,id'],
+            'inicio' => ['nullable', 'date'],
+        ]);
+
+        $this->sincronizarProfessoresComDocentes();
+
+        $docente = Docente::query()
+            ->whereKey($dados['professor_id'])
+            ->where('disciplina_id', $dados['disciplina_id'])
+            ->first();
+
+        // A combinação não pertence ao docente selecionado. Para a tela do
+        // aluno isso é apenas uma consulta sem resultados, e não um erro.
+        if (!$docente) {
+            return response()->json([]);
+        }
+
+        if (!empty($dados['inicio'])) {
+            $inicioSemana = Carbon::parse($dados['inicio'])->startOfDay();
+            $fimSemana = (clone $inicioSemana)->addDays(4)->endOfDay();
+        } else {
+            $inicioSemana = now()->startOfWeek(Carbon::MONDAY)->subDays(7)->startOfDay();
+            $fimSemana = (clone $inicioSemana)->addDays(21)->endOfDay();
+        }
+
+        $alocacoes = Alocacao::with(['professor', 'sala'])
+            ->where('professor_id', $docente->id)
+            ->whereBetween('data', [$inicioSemana->toDateString(), $fimSemana->toDateString()])
+            ->orderBy('data')
+            ->orderBy('horario_inicio')
+            ->get();
+
+        return response()->json($alocacoes);
+    }
+
     public function exportarXlsx()
     {
         $this->sincronizarProfessoresComDocentes();
@@ -686,6 +732,10 @@ XML;
             return;
         }
 
+        if (Sala::where('ativa', true)->count() >= count(self::SALAS_SEED)) {
+            return;
+        }
+
         foreach (self::SALAS_SEED as $dadosSala) {
             Sala::updateOrCreate(
                 [
@@ -711,6 +761,150 @@ XML;
                 }
             })
             ->update(['ativa' => false]);
+    }
+
+    public function criarProfessor(Request $request)
+    {
+        $request->validate([
+            'nome' => 'required|string|min:2|max:255',
+            'disciplina_id' => 'nullable|exists:disciplinas,id',
+            'disciplina_nome' => 'nullable|string|max:255',
+        ]);
+
+        $nome = trim(preg_replace('/\s+/', ' ', $request->string('nome')->toString()));
+        $disciplinaId = null;
+
+        if ($request->filled('disciplina_nome')) {
+            $nomeDisc = trim(preg_replace('/\s+/', ' ', $request->string('disciplina_nome')->toString()));
+            if ($nomeDisc !== '') {
+                $disciplina = Disciplina::firstOrCreate(['nome' => $nomeDisc]);
+                $disciplinaId = $disciplina->id;
+            }
+        } elseif ($request->filled('disciplina_id')) {
+            $disciplinaId = $request->disciplina_id;
+        }
+
+        if ($disciplinaId) {
+            $outroDocente = Docente::where('disciplina_id', $disciplinaId)->first();
+            if ($outroDocente) {
+                $nomeDisciplina = Disciplina::find($disciplinaId)?->nome ?? 'Disciplina';
+                return response()->json([
+                    'message' => "A disciplina \"{$nomeDisciplina}\" já está atribuída ao professor {$outroDocente->nome}."
+                ], 409);
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $docente = Docente::create([
+                'nome' => $nome,
+                'disciplina_id' => $disciplinaId,
+            ]);
+
+            $disciplinaNome = $docente->disciplina?->nome ?? 'Sem disciplina';
+
+            $professor = Professor::create([
+                'id' => $docente->id,
+                'nome' => $nome,
+                'email' => sprintf('professor%d@fatec.edu', $docente->id),
+                'disciplina' => $disciplinaNome,
+                'curso' => 'Não informado',
+                'ativo' => true,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Professor cadastrado com sucesso!',
+                'professor' => [
+                    'id' => $professor->id,
+                    'nome' => $professor->nome,
+                    'disciplina' => $professor->disciplina,
+                    'curso' => $professor->curso,
+                    'ativo' => true,
+                    'alocacoes_ativas' => [],
+                    'alocacoesAtivas' => [],
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Erro ao cadastrar professor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function editarProfessor(Request $request, $id)
+    {
+        $request->validate([
+            'nome' => 'required|string|min:2|max:255',
+        ]);
+
+        $nome = trim(preg_replace('/\s+/', ' ', $request->string('nome')->toString()));
+
+        $docente = Docente::find($id);
+        if (!$docente) {
+            return response()->json(['message' => 'Professor não encontrado.'], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            $docente->update(['nome' => $nome]);
+
+            $professor = Professor::find($id);
+            if ($professor) {
+                $professor->update(['nome' => $nome]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Professor atualizado com sucesso!',
+                'professor' => [
+                    'id' => $docente->id,
+                    'nome' => $docente->nome,
+                    'disciplina' => $docente->disciplina?->nome ?: 'Sem disciplina',
+                    'curso' => $professor?->curso ?? 'Não informado',
+                    'ativo' => true,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Erro ao atualizar professor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function excluirProfessor($id)
+    {
+        $docente = Docente::find($id);
+        if (!$docente) {
+            return response()->json(['message' => 'Professor não encontrado.'], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            Alocacao::where('professor_id', $id)->delete();
+
+            $professor = Professor::find($id);
+            if ($professor) {
+                $professor->delete();
+            }
+
+            $docente->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Professor excluído com sucesso!'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Erro ao excluir professor: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function alocarProfessor(Request $request)

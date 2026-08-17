@@ -159,7 +159,44 @@
   overflow-y: auto;
 }
 
-.professors-sidebar h2,
+.professors-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 2px solid #667eea;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.professors-sidebar-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.25rem;
+}
+
+.btn-add-professor {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+.btn-add-professor:hover {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  transform: translateY(-1px);
+}
+
 .rooms-section h2 {
   margin-top: 0;
   color: #333;

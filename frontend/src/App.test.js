@@ -1,8 +1,24 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+jest.mock('./services/api', () => ({
+  directorService: {
+    getProfessores: jest.fn(() => Promise.resolve({ data: [] })),
+    getSalas: jest.fn(() => Promise.resolve({ data: [] })),
+    getAlocacoesAtuais: jest.fn(() => Promise.resolve({ data: [] })),
+    getAlocacoesSemana: jest.fn(() => Promise.resolve({ data: [] })),
+    getDisciplinas: jest.fn(() => Promise.resolve({ data: [] })),
+    getDocentes: jest.fn(() => Promise.resolve({ data: [] })),
+    getAlocacoesAluno: jest.fn(() => Promise.resolve({ data: [] })),
+  },
+}));
+
+test('navega do painel do diretor para a consulta do aluno', async () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+
+  expect(await screen.findByRole('heading', { name: /sistema de alocação/i })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: /ir para tela aluno/i }));
+
+  expect(await screen.findByRole('heading', { name: /consulta de aulas/i })).toBeInTheDocument();
 });

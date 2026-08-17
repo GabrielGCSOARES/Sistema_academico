@@ -53,6 +53,42 @@
     text-overflow: ellipsis;
 }
 
+/* ── Card Top Actions (Edit / Delete) ── */
+.professor-card-top-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 8px;
+}
+
+.btn-card-icon {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.btn-card-icon:hover {
+    transform: scale(1.08);
+}
+
+.btn-card-edit:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.btn-card-delete:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+}
+
 /* ── Discipline Badges ── */
 .disciplina-badge {
     display: inline-flex;

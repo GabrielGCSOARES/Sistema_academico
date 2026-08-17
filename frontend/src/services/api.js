@@ -41,6 +41,17 @@ const request = async (path, options = {}) => {
 
 export const directorService = {
   getProfessores: () => request('/professores'),
+  criarProfessor: (data) => request('/professores', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  editarProfessor: (id, data) => request(`/professores/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  excluirProfessor: (id) => request(`/professores/${id}`, {
+    method: 'DELETE',
+  }),
   getDocentes: () => request('/docentes'),
   getDisciplinas: () => request('/disciplinas'),
   vincularDocenteDisciplina: (data) => request('/docentes/vincular-disciplina', {
@@ -56,6 +67,9 @@ export const directorService = {
   getHorariosAulasPorSala: (salaId) => request(`/salas/${salaId}/horarios-aulas`),
   getAlocacoesAtuais: () => request('/alocacoes/atuais'),
   getAlocacoesSemana: () => request('/alocacoes/semana'),
+  getAlocacoesAluno: (professorId, disciplinaId) => request(
+    `/alocacoes/consulta-aluno?professor_id=${encodeURIComponent(professorId)}&disciplina_id=${encodeURIComponent(disciplinaId)}`
+  ),
   alocarProfessor: (data) => request('/alocacoes', {
     method: 'POST',
     body: JSON.stringify(data),
