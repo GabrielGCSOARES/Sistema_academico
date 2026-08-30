@@ -5,6 +5,7 @@ import SalaHorarioModal from './SalaHorarioModal';
 import AlocacaoModal from './AlocacaoModal';
 import ProfessorModal from './ProfessorModal';
 import ExportModal from './ExportModal';
+import SiglaDisciplinaModal from './SiglaDisciplinaModal';
 import { directorService } from '../../services/api';
 import './DirectorHome.css';
 
@@ -18,6 +19,7 @@ const DirectorHome = ({ onNavigateToStudent }) => {
   const [selectedSalaDetails, setSelectedSalaDetails] = useState(null);
 
   const [showVinculoModal, setShowVinculoModal] = useState(false);
+  const [showSiglaModal, setShowSiglaModal] = useState(false);
   const [showRelatorio, setShowRelatorio] = useState(false);
   const [relatorioProfessorId, setRelatorioProfessorId] = useState('');
   const [pendingAlocacao, setPendingAlocacao] = useState(null);
@@ -344,6 +346,14 @@ const DirectorHome = ({ onNavigateToStudent }) => {
           </button>
           <button
             type="button"
+            className="export-button export-button--siglas"
+            onClick={() => setShowSiglaModal(true)}
+            title="Gerenciar siglas das disciplinas (não bloqueia matérias)"
+          >
+            🏷️ Siglas das Disciplinas
+          </button>
+          <button
+            type="button"
             className={`export-button ${showRelatorio ? 'active' : ''}`}
             onClick={() => setShowRelatorio((value) => !value)}
           >
@@ -547,6 +557,15 @@ const DirectorHome = ({ onNavigateToStudent }) => {
           professores={professoresOrdenados}
           relatorioProfessorId={relatorioProfessorId}
           setRelatorioProfessorId={setRelatorioProfessorId}
+        />
+      )}
+
+      {showSiglaModal && (
+        <SiglaDisciplinaModal
+          onClose={() => setShowSiglaModal(false)}
+          onSaved={async () => {
+            await loadData(false);
+          }}
         />
       )}
     </div>

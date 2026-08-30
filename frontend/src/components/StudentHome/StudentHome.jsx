@@ -1,61 +1,92 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { directorService } from '../../services/api';
+import CursoSelecaoModal from './CursoSelecaoModal';
 import './StudentHome.css';
 
-const initialFilters = {
-  curso: '',
-  professorId: '',
-  salaId: '',
-  disciplinaId: '',
-};
+const DIAS_SEMANA_NOMES = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
 
 const StudentHome = ({ onBack }) => {
+  const [cursos, setCursos] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
-  const [filtros, setFiltros] = useState(initialFilters);
-  const [resultados, setResultados] = useState([]);
+
+  // Estado do Modal de Seleção de Curso
+  const [showCursoModal, setShowCursoModal] = useState(false);
+  const [cursoInfo, setCursoInfo] = useState(null); // { nome, turno, periodoNumero, periodoTipo, nomeCompleto }
+
+  // Filtros por professor/disciplina
+  const [professorId, setProfessorId] = useState('');
+  const [disciplinaId, setDisciplinaId] = useState('');
+
+  // Alocações carregadas
+  const [alocacoesSemana, setAlocacoesSemana] = useState([]);
   const [carregandoFiltros, setCarregandoFiltros] = useState(true);
   const [carregandoResultados, setCarregandoResultados] = useState(false);
   const [erroFiltros, setErroFiltros] = useState('');
   const [erroResultados, setErroResultados] = useState('');
 
-  useEffect(() => {
-    let ativo = true;
+  const carregarFiltros = useCallback(async () => {
+    try {
+      setCarregandoFiltros(true);
+      const [docentesResponse, disciplinasResponse, cursosResponse] = await Promise.all([
+        directorService.getDocentes(),
+        directorService.getDisciplinas(),
+        directorService.getCursos(),
+      ]);
 
-    const carregarFiltros = async () => {
-      try {
-        const [docentesResponse, disciplinasResponse] = await Promise.all([
-          directorService.getDocentes(),
-          directorService.getDisciplinas(),
-        ]);
-
-        if (!ativo) return;
-
-        setDocentes(docentesResponse?.data || []);
-        setDisciplinas(disciplinasResponse?.data || []);
-        setErroFiltros('');
-      } catch (error) {
-        if (ativo) {
-          setErroFiltros('Não foi possível carregar os filtros. Tente novamente.');
-        }
-        console.error('Erro ao carregar filtros da consulta do aluno:', error);
-      } finally {
-        if (ativo) {
-          setCarregandoFiltros(false);
-        }
-      }
-    };
-
-    carregarFiltros();
-
-    return () => {
-      ativo = false;
-    };
+      setDocentes(docentesResponse?.data || []);
+      setDisciplinas(disciplinasResponse?.data || []);
+      setCursos(cursosResponse?.data || []);
+      setErroFiltros('');
+    } catch (error) {
+      setErroFiltros('Não foi possível carregar os dados. Tente novamente.');
+      console.error('Erro ao carregar dados da consulta do aluno:', error);
+    } finally {
+      setCarregandoFiltros(false);
+    }
   }, []);
 
+  useEffect(() => {
+    carregarFiltros();
+  }, [carregarFiltros]);
+
+  // Carregar alocações da semana com base no turno do curso ou no professor/disciplina
+  const carregarGradeSemanal = useCallback(async () => {
+    setCarregandoResultados(true);
+    setErroResultados('');
+
+    try {
+      const params = {};
+      if (cursoInfo?.turno) {
+        params.turno = cursoInfo.turno;
+      }
+      if (professorId) {
+        params.professor_id = professorId;
+      }
+      if (disciplinaId) {
+        params.disciplina_id = disciplinaId;
+      }
+
+      const response = await directorService.getAlocacoesAluno(params);
+      setAlocacoesSemana(response?.data || []);
+    } catch (error) {
+      setAlocacoesSemana([]);
+      setErroResultados('Não foi possível consultar os horários. Tente novamente.');
+      console.error('Erro ao consultar grade semanal do aluno:', error);
+    } finally {
+      setCarregandoResultados(false);
+    }
+  }, [cursoInfo, professorId, disciplinaId]);
+
+  useEffect(() => {
+    if (cursoInfo || (professorId && disciplinaId)) {
+      carregarGradeSemanal();
+    }
+  }, [cursoInfo, professorId, disciplinaId, carregarGradeSemanal]);
+
   const professorSelecionado = useMemo(
-    () => docentes.find((docente) => Number(docente.id) === Number(filtros.professorId)),
-    [docentes, filtros.professorId]
+    () => docentes.find((docente) => Number(docente.id) === Number(professorId)),
+    [docentes, professorId]
   );
 
   const disciplinasDisponiveis = useMemo(() => {
@@ -68,106 +99,44 @@ const StudentHome = ({ onBack }) => {
     );
   }, [disciplinas, professorSelecionado]);
 
-  const professoresDisponiveis = useMemo(() => {
-    if (!filtros.disciplinaId) {
-      return docentes;
-    }
-
-    return docentes.filter(
-      (docente) => Number(docente.disciplina_id) === Number(filtros.disciplinaId)
-    );
-  }, [docentes, filtros.disciplinaId]);
-
-  const consultaPronta = Boolean(filtros.professorId && filtros.disciplinaId);
-
-  useEffect(() => {
-    let ativo = true;
-
-    if (!consultaPronta) {
-      setResultados([]);
-      setErroResultados('');
-      setCarregandoResultados(false);
-      return () => {
-        ativo = false;
-      };
-    }
-
-    const carregarResultados = async () => {
-      setCarregandoResultados(true);
-      setErroResultados('');
-
-      try {
-        const response = await directorService.getAlocacoesAluno(
-          filtros.professorId,
-          filtros.disciplinaId
-        );
-
-        if (ativo) {
-          setResultados(response?.data || []);
-        }
-      } catch (error) {
-        if (ativo) {
-          setResultados([]);
-          setErroResultados('Não foi possível consultar os horários. Tente novamente.');
-        }
-        console.error('Erro ao consultar horários para o aluno:', error);
-      } finally {
-        if (ativo) {
-          setCarregandoResultados(false);
-        }
-      }
-    };
-
-    carregarResultados();
-
-    return () => {
-      ativo = false;
-    };
-  }, [consultaPronta, filtros.disciplinaId, filtros.professorId]);
-
-  const atualizarProfessor = (professorId) => {
-    const proximoProfessor = docentes.find((docente) => Number(docente.id) === Number(professorId));
-    const disciplinaAindaValida =
-      proximoProfessor?.disciplina_id &&
-      Number(proximoProfessor.disciplina_id) === Number(filtros.disciplinaId);
-
-    setFiltros((filtrosAtuais) => ({
-      ...filtrosAtuais,
-      professorId,
-      disciplinaId: disciplinaAindaValida ? filtrosAtuais.disciplinaId : '',
-    }));
-  };
-
-  const atualizarDisciplina = (disciplinaId) => {
-    const professorAindaValido =
-      professorSelecionado?.disciplina_id &&
-      Number(professorSelecionado.disciplina_id) === Number(disciplinaId);
-
-    setFiltros((filtrosAtuais) => ({
-      ...filtrosAtuais,
-      disciplinaId,
-      professorId: professorAindaValido ? filtrosAtuais.professorId : '',
-    }));
-  };
-
   const formatarData = (data) => {
     const [ano, mes, dia] = String(data || '').slice(0, 10).split('-');
-
     if (!ano || !mes || !dia) return 'Data não informada';
+    return `${dia}/${mes}/${ano}`;
+  };
 
-    return new Intl.DateTimeFormat('pt-BR', {
-      weekday: 'long',
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    }).format(new Date(Number(ano), Number(mes) - 1, Number(dia)));
+  const getDiaSemanaIndice = (dataStr) => {
+    if (!dataStr) return -1;
+    const [ano, mes, dia] = String(dataStr).slice(0, 10).split('-');
+    if (!ano || !mes || !dia) return -1;
+    const dt = new Date(Number(ano), Number(mes) - 1, Number(dia));
+    const day = dt.getDay(); // 0 Dom, 1 Seg, 2 Ter, 3 Qua, 4 Qui, 5 Sex, 6 Sab
+    return day >= 1 && day <= 5 ? day - 1 : -1;
   };
 
   const formatarHorario = (horario) => String(horario || '').slice(0, 5) || '--:--';
 
-  const disciplinaSelecionada = disciplinas.find(
-    (disciplina) => Number(disciplina.id) === Number(filtros.disciplinaId)
-  );
+  // Agrupar alocações por dia da semana (0 = Segunda, 4 = Sexta)
+  const alocacoesPorDia = useMemo(() => {
+    const dias = [[], [], [], [], []];
+    alocacoesSemana.forEach((aloc) => {
+      const idx = getDiaSemanaIndice(aloc.data);
+      if (idx >= 0 && idx <= 4) {
+        dias[idx].push(aloc);
+      }
+    });
+
+    // Ordenar horários de cada dia
+    dias.forEach((lista) => {
+      lista.sort((a, b) => {
+        const hA = String(a.horario_inicio || '');
+        const hB = String(b.horario_inicio || '');
+        return hA.localeCompare(hB);
+      });
+    });
+
+    return dias;
+  }, [alocacoesSemana]);
 
   return (
     <div className="student-home">
@@ -175,9 +144,9 @@ const StudentHome = ({ onBack }) => {
         <div className="student-header-content">
           <div>
             <p className="student-eyebrow">Fatec Tatuí</p>
-            <h1>Consulta de aulas</h1>
+            <h1>Consulta de Horários e Salas</h1>
             <p className="student-subtitle">
-              Selecione o professor e a disciplina para encontrar a sala e o horário da aula.
+              Consulte a grade semanal completa de aulas por Curso, Turno e Semestre, ou filtre por Professor e Disciplina.
             </p>
           </div>
           <button type="button" className="back-button" onClick={onBack}>
@@ -187,40 +156,92 @@ const StudentHome = ({ onBack }) => {
       </header>
 
       <main className="student-content">
+        {/* Card Principal de Seleção de Curso */}
+        <section className="student-card course-selection-card">
+          <div className="course-banner-inner">
+            <div className="course-banner-text">
+              <span className="course-badge-pill">Grade Curricular</span>
+              {cursoInfo ? (
+                <div>
+                  <h2 className="selected-course-title">{cursoInfo.nome}</h2>
+                  <span className="selected-course-meta">
+                    {cursoInfo.periodoNumero}º {cursoInfo.periodoTipo} — Turno {cursoInfo.turno}
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="selected-course-title">Nenhum curso selecionado</h2>
+                  <span className="selected-course-meta">
+                    Selecione seu curso e semestre para visualizar a grade semanal com salas e horários.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="btn-select-course-main"
+              onClick={() => setShowCursoModal(true)}
+            >
+              {cursoInfo ? '🔄 Alterar Curso / Turno' : ' Selecionar Meu Curso'}
+            </button>
+          </div>
+        </section>
+
+        {/* Card de Filtros Opcionais de Professor e Disciplina */}
         <section className="student-card filters-card" aria-labelledby="filters-title">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Filtros</p>
-              <h2 id="filters-title">Encontre sua aula</h2>
+              <p className="section-kicker">Filtros Opcionais</p>
+              <h2 id="filters-title">Buscar por Professor ou Disciplina</h2>
             </div>
-            <span className="available-filters">Professor e disciplina disponíveis</span>
+            {(professorId || disciplinaId) && (
+              <button
+                type="button"
+                className="btn-clear-filters"
+                onClick={() => {
+                  setProfessorId('');
+                  setDisciplinaId('');
+                }}
+              >
+                Limpar Filtros de Professor
+              </button>
+            )}
           </div>
 
           {erroFiltros ? (
             <div className="student-message student-message--error" role="alert">
               <p>{erroFiltros}</p>
-              <button type="button" onClick={() => window.location.reload()}>
+              <button type="button" onClick={carregarFiltros}>
                 Recarregar filtros
               </button>
             </div>
           ) : (
             <div className="filters-grid">
-              <label className="filter-field filter-field--pending">
-                <span>Curso <em>Em breve</em></span>
-                <select value={filtros.curso} disabled aria-label="Filtro de curso em breve">
-                  <option>Disponível em breve</option>
-                </select>
+              {/* Botão de Curso */}
+              <label className="filter-field">
+                <span>Curso Selecionado</span>
+                <button
+                  type="button"
+                  className="course-filter-trigger"
+                  onClick={() => setShowCursoModal(true)}
+                >
+                  {cursoInfo ? cursoInfo.nomeCompleto : 'Clique para escolher Curso e Semestre'}
+                </button>
               </label>
 
+              {/* Professor */}
               <label className="filter-field">
                 <span>Professor</span>
                 <select
-                  value={filtros.professorId}
-                  onChange={(event) => atualizarProfessor(event.target.value)}
+                  value={professorId}
+                  onChange={(event) => {
+                    setProfessorId(event.target.value);
+                  }}
                   disabled={carregandoFiltros}
                 >
-                  <option value="">Selecione um professor</option>
-                  {professoresDisponiveis.map((docente) => (
+                  <option value="">Todos os professores</option>
+                  {docentes.map((docente) => (
                     <option key={docente.id} value={docente.id}>
                       {docente.nome}
                     </option>
@@ -228,109 +249,160 @@ const StudentHome = ({ onBack }) => {
                 </select>
               </label>
 
-              <label className="filter-field filter-field--pending">
-                <span>Sala <em>Em breve</em></span>
-                <select value={filtros.salaId} disabled aria-label="Filtro de sala em breve">
-                  <option>Disponível em breve</option>
-                </select>
-              </label>
-
+              {/* Disciplina */}
               <label className="filter-field">
                 <span>Disciplina</span>
                 <select
-                  value={filtros.disciplinaId}
-                  onChange={(event) => atualizarDisciplina(event.target.value)}
+                  value={disciplinaId}
+                  onChange={(event) => setDisciplinaId(event.target.value)}
                   disabled={carregandoFiltros || Boolean(professorSelecionado && !professorSelecionado.disciplina_id)}
                 >
                   <option value="">
                     {professorSelecionado && !professorSelecionado.disciplina_id
                       ? 'Professor sem disciplina vinculada'
-                      : 'Selecione uma disciplina'}
+                      : 'Todas as disciplinas'}
                   </option>
-                  {disciplinasDisponiveis.map((disciplina) => (
-                    <option key={disciplina.id} value={disciplina.id}>
-                      {disciplina.nome}
-                    </option>
-                  ))}
+                  {disciplinasDisponiveis.map((disciplina) => {
+                    const siglaStr = disciplina.sigla
+                      ? `[${disciplina.sigla}${disciplina.sigla_secundaria ? ` / ${disciplina.sigla_secundaria}` : ''}] `
+                      : '';
+                    return (
+                      <option key={disciplina.id} value={disciplina.id}>
+                        {siglaStr}{disciplina.nome}
+                      </option>
+                    );
+                  })}
                 </select>
               </label>
             </div>
           )}
         </section>
 
+        {/* Grade Horária da Semana */}
         <section className="student-card results-card" aria-live="polite" aria-labelledby="results-title">
           <div className="section-heading">
             <div>
-              <p className="section-kicker">Resultado da consulta</p>
-              <h2 id="results-title">Sala e horário</h2>
+              <p className="section-kicker">Grade Horária da Semana</p>
+              <h2 id="results-title">
+                {cursoInfo
+                  ? `Aulas da Semana — ${cursoInfo.nome} (${cursoInfo.turno})`
+                  : 'Horários e Salas das Aulas'}
+              </h2>
             </div>
-            {consultaPronta && !carregandoResultados && !erroResultados && (
+            {alocacoesSemana.length > 0 && !carregandoResultados && (
               <span className="result-count">
-                {resultados.length} {resultados.length === 1 ? 'horário encontrado' : 'horários encontrados'}
+                {alocacoesSemana.length} {alocacoesSemana.length === 1 ? 'aula programada' : 'aulas programadas'}
               </span>
             )}
           </div>
 
-          {!consultaPronta && (
+          {!cursoInfo && !professorId && !disciplinaId && (
             <div className="student-empty-state">
-              <span className="empty-icon" aria-hidden="true">⌕</span>
-              <p>Escolha um professor e uma disciplina para consultar os horários cadastrados.</p>
+              <span className="empty-icon" aria-hidden="true"></span>
+              <p>Clique no botão acima para selecionar seu Curso, Turno e Semestre, ou consulte por Professor.</p>
+              <button
+                type="button"
+                className="btn-select-course-empty"
+                onClick={() => setShowCursoModal(true)}
+              >
+                Selecionar Meu Curso Agora
+              </button>
             </div>
           )}
 
-          {consultaPronta && carregandoResultados && (
+          {carregandoResultados && (
             <div className="student-empty-state">
               <span className="student-spinner" aria-label="Carregando horários" />
-              <p>Buscando horários disponíveis...</p>
+              <p>Carregando horários e salas da grade...</p>
             </div>
           )}
 
-          {consultaPronta && !carregandoResultados && erroResultados && (
+          {!carregandoResultados && erroResultados && (
             <div className="student-message student-message--error" role="alert">
               <p>{erroResultados}</p>
             </div>
           )}
 
-          {consultaPronta && !carregandoResultados && !erroResultados && resultados.length === 0 && (
+          {!carregandoResultados && !erroResultados && (cursoInfo || (professorId && disciplinaId)) && alocacoesSemana.length === 0 && (
             <div className="student-empty-state">
               <span className="empty-icon" aria-hidden="true">◷</span>
               <p>
-                Não há horários cadastrados para {professorSelecionado?.nome || 'este professor'} em{' '}
-                {disciplinaSelecionada?.nome || 'esta disciplina'}.
+                Não foram encontradas aulas cadastradas para este período/filtro na semana.
               </p>
             </div>
           )}
 
-          {consultaPronta && !carregandoResultados && !erroResultados && resultados.length > 0 && (
-            <div className="results-list">
-              {resultados.map((alocacao) => (
-                <article key={alocacao.id} className="result-item">
-                  <div className="result-date">
-                    <span>Data da aula</span>
-                    <strong>{formatarData(alocacao.data)}</strong>
+          {/* Grade Semanal por Dias da Semana (Segunda a Sexta) */}
+          {!carregandoResultados && !erroResultados && alocacoesSemana.length > 0 && (
+            <div className="weekly-schedule-grid">
+              {DIAS_SEMANA_NOMES.map((nomeDia, idx) => {
+                const aulasDoDia = alocacoesPorDia[idx] || [];
+
+                return (
+                  <div key={nomeDia} className="schedule-day-column">
+                    <div className="day-header">
+                      <h3>{nomeDia}</h3>
+                      <span className="day-count-badge">
+                        {aulasDoDia.length} {aulasDoDia.length === 1 ? 'aula' : 'aulas'}
+                      </span>
+                    </div>
+
+                    <div className="day-classes-list">
+                      {aulasDoDia.length === 0 ? (
+                        <div className="empty-day-box">
+                          <span>Sem aulas agendadas</span>
+                        </div>
+                      ) : (
+                        aulasDoDia.map((aloc) => {
+                          const profNome = aloc.professor?.nome || 'Professor não informado';
+                          const materia = aloc.professor?.disciplina || 'Disciplina';
+                          const salaNome = aloc.sala?.nome || 'Sala não informada';
+                          const predioNome = aloc.predio || aloc.sala?.predio || 'Prédio 1';
+
+                          return (
+                            <article key={aloc.id} className="class-schedule-card">
+                              <div className="class-card-top-row">
+                                <span className="class-time-badge">
+                                   {formatarHorario(aloc.horario_inicio)} às {formatarHorario(aloc.horario_fim)}
+                                </span>
+                                {aloc.data && (
+                                  <span className="class-date-tag">
+                                     {formatarData(aloc.data)}
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="class-subject-title">{materia}</h4>
+                              <p className="class-professor-name"> {profNome}</p>
+
+                              <div className="class-location-footer">
+                                <span className="room-tag"> {salaNome}</span>
+                                <span className="building-tag">{predioNome}</span>
+                              </div>
+                            </article>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
-                  <dl className="result-details">
-                    <div>
-                      <dt>Sala</dt>
-                      <dd>{alocacao.sala?.nome || 'Não informada'}</dd>
-                    </div>
-                    <div>
-                      <dt>Prédio</dt>
-                      <dd>{alocacao.predio || alocacao.sala?.predio || 'Não informado'}</dd>
-                    </div>
-                    <div>
-                      <dt>Horário</dt>
-                      <dd>
-                        {formatarHorario(alocacao.horario_inicio)} às {formatarHorario(alocacao.horario_fim)}
-                      </dd>
-                    </div>
-                  </dl>
-                </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
       </main>
+
+      {/* Modal de Seleção de Curso */}
+      {showCursoModal && (
+        <CursoSelecaoModal
+          cursosDisponiveis={cursos}
+          cursoAtual={cursoInfo}
+          onClose={() => setShowCursoModal(false)}
+          onConfirmar={(dados) => {
+            setCursoInfo(dados);
+          }}
+        />
+      )}
     </div>
   );
 };

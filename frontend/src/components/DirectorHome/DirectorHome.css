@@ -50,6 +50,21 @@
   box-shadow: 0 6px 18px rgba(102, 126, 234, 0.5);
 }
 
+.export-button--siglas {
+  background: #0f172a;
+  border: 1px solid #334155;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.export-button--siglas:hover {
+  background: #1e293b;
+  border-color: #475569;
+}
+
 .export-button.active {
   background: #2d3748;
 }

@@ -40,6 +40,19 @@ const request = async (path, options = {}) => {
 };
 
 export const directorService = {
+  // Cursos e Estruturas
+  getCursos: () => request('/cursos'),
+  getCurso: (id) => request(`/cursos/${id}`),
+  getCursoPeriodos: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/curso-periodos${query ? `?${query}` : ''}`);
+  },
+  criarCurso: (data) => request('/cursos', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  // Professores
   getProfessores: () => request('/professores'),
   criarProfessor: (data) => request('/professores', {
     method: 'POST',
@@ -52,8 +65,33 @@ export const directorService = {
   excluirProfessor: (id) => request(`/professores/${id}`, {
     method: 'DELETE',
   }),
+
+  // Disciplinas & Siglas
+  getDisciplinas: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/disciplinas${query ? `?${query}` : ''}`);
+  },
+  criarDisciplina: (data) => request('/disciplinas', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  atualizarSiglaDisciplina: (disciplinaId, sigla, sigla_secundaria = null) => request(`/disciplinas/${disciplinaId}/sigla`, {
+    method: 'PUT',
+    body: JSON.stringify({ sigla, sigla_secundaria }),
+  }),
+  redefinirSiglasDisciplina: (disciplinaId) => request(`/disciplinas/${disciplinaId}/redefinir-siglas`, {
+    method: 'PUT',
+  }),
+  atualizarDisciplina: (disciplinaId, data) => request(`/disciplinas/${disciplinaId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  excluirDisciplina: (disciplinaId) => request(`/disciplinas/${disciplinaId}`, {
+    method: 'DELETE',
+  }),
+
+  // Docentes & Vínculos
   getDocentes: () => request('/docentes'),
-  getDisciplinas: () => request('/disciplinas'),
   vincularDocenteDisciplina: (data) => request('/docentes/vincular-disciplina', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -61,15 +99,26 @@ export const directorService = {
   desvincularDocenteDisciplina: (docenteId) => request(`/docentes/${docenteId}/disciplina`, {
     method: 'DELETE',
   }),
-  getSalas: () => request('/salas'),
 
+  // Salas & Horários
+  getSalas: () => request('/salas'),
   getHorariosAulas: () => request('/horarios-aulas'),
   getHorariosAulasPorSala: (salaId) => request(`/salas/${salaId}/horarios-aulas`),
   getAlocacoesAtuais: () => request('/alocacoes/atuais'),
   getAlocacoesSemana: () => request('/alocacoes/semana'),
-  getAlocacoesAluno: (professorId, disciplinaId) => request(
-    `/alocacoes/consulta-aluno?professor_id=${encodeURIComponent(professorId)}&disciplina_id=${encodeURIComponent(disciplinaId)}`
-  ),
+  getAlocacoesAluno: (paramsOrProfessorId, disciplinaId = null) => {
+    if (typeof paramsOrProfessorId === 'object' && paramsOrProfessorId !== null) {
+      const query = new URLSearchParams(
+        Object.entries(paramsOrProfessorId).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+      ).toString();
+      return request(`/alocacoes/consulta-aluno?${query}`);
+    }
+    const params = {};
+    if (paramsOrProfessorId) params.professor_id = paramsOrProfessorId;
+    if (disciplinaId) params.disciplina_id = disciplinaId;
+    const query = new URLSearchParams(params).toString();
+    return request(`/alocacoes/consulta-aluno?${query}`);
+  },
   alocarProfessor: (data) => request('/alocacoes', {
     method: 'POST',
     body: JSON.stringify(data),

@@ -34,9 +34,12 @@ const DocenteDisciplinaModal = ({ onClose, onSaved, selectedDocenteId = null }) 
     return mapa;
   }, [docentes, docenteId]);
 
-  const nomeDisciplinaExibicao = criarNova
-    ? (novaDisciplinaNome.trim() || 'Nova Disciplina')
-    : (disciplinaSelecionada?.nome || 'Selecione a disciplina');
+  const nomeDisciplinaExibicao = useMemo(() => {
+    if (criarNova) return novaDisciplinaNome.trim() || 'Nova Disciplina';
+    if (!disciplinaSelecionada) return 'Selecione a disciplina';
+    const siglaStr = disciplinaSelecionada.sigla ? `[${disciplinaSelecionada.sigla}] ` : '';
+    return `${siglaStr}${disciplinaSelecionada.nome}`;
+  }, [criarNova, novaDisciplinaNome, disciplinaSelecionada]);
 
   useEffect(() => {
     const load = async () => {
@@ -214,9 +217,10 @@ const DocenteDisciplinaModal = ({ onClose, onSaved, selectedDocenteId = null }) 
                   <select value={disciplinaId} onChange={(e) => setDisciplinaId(e.target.value)}>
                     {disciplinas.map((disc) => {
                       const ocupadaPor = disciplinasOcupadas[disc.id];
+                      const siglaStr = disc.sigla ? `[${disc.sigla}] ` : '';
                       return (
                         <option key={disc.id} value={disc.id} disabled={!!ocupadaPor}>
-                          {disc.nome}{ocupadaPor ? ` (${ocupadaPor})` : ''}
+                          {siglaStr}{disc.nome}{ocupadaPor ? ` (${ocupadaPor})` : ''}
                         </option>
                       );
                     })}

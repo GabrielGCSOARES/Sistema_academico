@@ -150,23 +150,15 @@ class DirectorController extends Controller
     public function consultarAlocacoesAluno(Request $request)
     {
         $dados = $request->validate([
-            'professor_id' => ['required', 'integer', 'exists:docentes,id'],
-            'disciplina_id' => ['required', 'integer', 'exists:disciplinas,id'],
+            'professor_id' => ['nullable', 'integer', 'exists:docentes,id'],
+            'disciplina_id' => ['nullable', 'integer', 'exists:disciplinas,id'],
+            'curso_id' => ['nullable', 'integer', 'exists:cursos,id'],
+            'turno' => ['nullable', 'string'],
+            'periodo_numero' => ['nullable', 'integer'],
             'inicio' => ['nullable', 'date'],
         ]);
 
         $this->sincronizarProfessoresComDocentes();
-
-        $docente = Docente::query()
-            ->whereKey($dados['professor_id'])
-            ->where('disciplina_id', $dados['disciplina_id'])
-            ->first();
-
-        // A combinação não pertence ao docente selecionado. Para a tela do
-        // aluno isso é apenas uma consulta sem resultados, e não um erro.
-        if (!$docente) {
-            return response()->json([]);
-        }
 
         if (!empty($dados['inicio'])) {
             $inicioSemana = Carbon::parse($dados['inicio'])->startOfDay();
@@ -176,12 +168,48 @@ class DirectorController extends Controller
             $fimSemana = (clone $inicioSemana)->addDays(21)->endOfDay();
         }
 
-        $alocacoes = Alocacao::with(['professor', 'sala'])
-            ->where('professor_id', $docente->id)
-            ->whereBetween('data', [$inicioSemana->toDateString(), $fimSemana->toDateString()])
-            ->orderBy('data')
-            ->orderBy('horario_inicio')
-            ->get();
+        // Se professor_id e disciplina_id foram informados, valida se o vínculo existe
+        if (!empty($dados['professor_id']) && !empty($dados['disciplina_id'])) {
+            $docente = Docente::query()
+                ->whereKey($dados['professor_id'])
+                ->where('disciplina_id', $dados['disciplina_id'])
+                ->first();
+
+            if (!$docente) {
+                return response()->json([]);
+            }
+        }
+
+        $query = Alocacao::with(['professor', 'sala'])
+            ->whereIn('professor_id', Docente::query()->select('id'))
+            ->whereBetween('data', [$inicioSemana->toDateString(), $fimSemana->toDateString()]);
+
+        if (!empty($dados['professor_id'])) {
+            $query->where('professor_id', $dados['professor_id']);
+        }
+
+        if (!empty($dados['disciplina_id'])) {
+            $disciplina = Disciplina::find($dados['disciplina_id']);
+            if ($disciplina) {
+                $query->whereHas('professor', function ($q) use ($disciplina) {
+                    $q->where('disciplina', $disciplina->nome);
+                });
+            }
+        }
+
+        if (!empty($dados['turno'])) {
+            $turno = $dados['turno'];
+            if ($turno === 'Manhã' || $turno === 'matutino') {
+                $query->where('horario_inicio', '<', '13:00:00');
+            } elseif ($turno === 'Tarde' || $turno === 'vespertino') {
+                $query->where('horario_inicio', '>=', '13:00:00')
+                      ->where('horario_inicio', '<', '18:30:00');
+            } elseif ($turno === 'Noite' || $turno === 'noturno') {
+                $query->where('horario_inicio', '>=', '18:30:00');
+            }
+        }
+
+        $alocacoes = $query->orderBy('data')->orderBy('horario_inicio')->get();
 
         return response()->json($alocacoes);
     }

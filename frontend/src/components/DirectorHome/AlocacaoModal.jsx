@@ -30,6 +30,7 @@ const AlocacaoModal = ({ professor, selectedDocenteId, onClose, onSaved }) => {
   const [docenteId, setDocenteId] = useState(initialDocId);
   const [disciplinaId, setDisciplinaId] = useState('');
   const [novaDisciplinaNome, setNovaDisciplinaNome] = useState('');
+  const [novaDisciplinaSigla, setNovaDisciplinaSigla] = useState('');
   const [criarNova, setCriarNova] = useState(false);
 
   // Carregar dados de docentes e disciplinas
@@ -99,9 +100,15 @@ const AlocacaoModal = ({ professor, selectedDocenteId, onClose, onSaved }) => {
     return disciplinas.find(d => Number(d.id) === Number(disciplinaId));
   }, [disciplinas, disciplinaId]);
 
-  const nomeDisciplinaPreview = criarNova
-    ? (novaDisciplinaNome.trim() || 'Nova Disciplina')
-    : (disciplinaSelecionada?.nome || 'Selecione uma disciplina');
+  const nomeDisciplinaPreview = useMemo(() => {
+    if (criarNova) {
+      const siglaPrefix = novaDisciplinaSigla.trim() ? `[${novaDisciplinaSigla.trim().toUpperCase()}] ` : '';
+      return `${siglaPrefix}${novaDisciplinaNome.trim() || 'Nova Disciplina'}`;
+    }
+    if (!disciplinaSelecionada) return 'Selecione uma disciplina';
+    const siglaPrefix = disciplinaSelecionada.sigla ? `[${disciplinaSelecionada.sigla}] ` : '';
+    return `${siglaPrefix}${disciplinaSelecionada.nome}`;
+  }, [criarNova, novaDisciplinaNome, novaDisciplinaSigla, disciplinaSelecionada]);
 
   const handleDocenteChange = (newDocId) => {
     setDocenteId(newDocId);
@@ -135,6 +142,9 @@ const AlocacaoModal = ({ professor, selectedDocenteId, onClose, onSaved }) => {
 
       if (criarNova) {
         payload.disciplina_nome = novaDisciplinaNome.trim();
+        if (novaDisciplinaSigla.trim()) {
+          payload.disciplina_sigla = novaDisciplinaSigla.trim().toUpperCase();
+        }
       } else {
         payload.disciplina_id = Number(disciplinaId);
       }
@@ -250,14 +260,24 @@ const AlocacaoModal = ({ professor, selectedDocenteId, onClose, onSaved }) => {
                 </div>
 
                 {criarNova ? (
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Ex: Inteligência Artificial II, Robótica..."
-                    value={novaDisciplinaNome}
-                    onChange={(e) => setNovaDisciplinaNome(e.target.value)}
-                    autoFocus
-                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Nome: Ex: Inteligência Artificial II, Robótica..."
+                      value={novaDisciplinaNome}
+                      onChange={(e) => setNovaDisciplinaNome(e.target.value)}
+                      autoFocus
+                    />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Sigla (Opcional): Ex: IA-2, ROB-N..."
+                      value={novaDisciplinaSigla}
+                      onChange={(e) => setNovaDisciplinaSigla(e.target.value)}
+                      maxLength={20}
+                    />
+                  </div>
                 ) : (
                   <select
                     className="form-select"
@@ -266,9 +286,10 @@ const AlocacaoModal = ({ professor, selectedDocenteId, onClose, onSaved }) => {
                   >
                     {disciplinas.map((disc) => {
                       const ocupadaPor = disciplinasOcupadas[disc.id];
+                      const siglaStr = disc.sigla ? `[${disc.sigla}] ` : '';
                       return (
                         <option key={disc.id} value={disc.id} disabled={!!ocupadaPor}>
-                          {disc.nome}{ocupadaPor ? ` (Já lecionada por ${ocupadaPor})` : ''}
+                          {siglaStr}{disc.nome}{ocupadaPor ? ` (Já lecionada por ${ocupadaPor})` : ''}
                         </option>
                       );
                     })}
