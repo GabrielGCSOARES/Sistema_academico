@@ -7,6 +7,7 @@ use App\Models\Sala;
 use App\Models\Alocacao;
 use App\Models\Docente;
 use App\Models\Disciplina;
+use App\Models\Curso;
 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -162,7 +163,7 @@ class DirectorController extends Controller
 
         if (!empty($dados['inicio'])) {
             $inicioSemana = Carbon::parse($dados['inicio'])->startOfDay();
-            $fimSemana = (clone $inicioSemana)->addDays(4)->endOfDay();
+            $fimSemana = (clone $inicioSemana)->addDays(5)->endOfDay();
         } else {
             $inicioSemana = now()->startOfWeek(Carbon::MONDAY)->subDays(7)->startOfDay();
             $fimSemana = (clone $inicioSemana)->addDays(21)->endOfDay();
@@ -180,7 +181,7 @@ class DirectorController extends Controller
             }
         }
 
-        $query = Alocacao::with(['professor', 'sala'])
+        $query = Alocacao::with(['professor.docente.disciplina.cursoPeriodo', 'sala'])
             ->whereIn('professor_id', Docente::query()->select('id'))
             ->whereBetween('data', [$inicioSemana->toDateString(), $fimSemana->toDateString()]);
 
@@ -191,21 +192,74 @@ class DirectorController extends Controller
         if (!empty($dados['disciplina_id'])) {
             $disciplina = Disciplina::find($dados['disciplina_id']);
             if ($disciplina) {
-                $query->whereHas('professor', function ($q) use ($disciplina) {
-                    $q->where('disciplina', $disciplina->nome);
+                $query->where(function ($q) use ($disciplina, $dados) {
+                    $q->whereHas('professor', function ($qp) use ($disciplina) {
+                        $qp->where('disciplina', $disciplina->nome);
+                    })->orWhereHas('professor.docente', function ($qd) use ($dados) {
+                        $qd->where('disciplina_id', $dados['disciplina_id']);
+                    });
                 });
             }
+        }
+
+        if (!empty($dados['curso_id'])) {
+            $curso = Curso::find($dados['curso_id']);
+            $query->where(function ($q) use ($dados, $curso) {
+                $q->whereHas('professor.docente.disciplina', function ($qd) use ($dados) {
+                    $qd->where('curso_id', $dados['curso_id'])
+                       ->orWhereHas('cursoPeriodos', function ($qp) use ($dados) {
+                           $qp->where('curso_id', $dados['curso_id']);
+                       });
+                });
+                if ($curso) {
+                    $q->orWhereHas('professor', function ($qp) use ($curso) {
+                        $qp->where('curso', $curso->nome);
+                    });
+                }
+            });
+        }
+
+        if (!empty($dados['periodo_numero'])) {
+            $query->whereHas('professor.docente.disciplina', function ($qd) use ($dados) {
+                $qd->where('periodo_numero', $dados['periodo_numero'])
+                   ->orWhereHas('cursoPeriodos', function ($qp) use ($dados) {
+                       $qp->where('periodo_numero', $dados['periodo_numero']);
+                   });
+            });
         }
 
         if (!empty($dados['turno'])) {
             $turno = $dados['turno'];
             if ($turno === 'Manhã' || $turno === 'matutino') {
-                $query->where('horario_inicio', '<', '13:00:00');
+                $query->where(function ($q) {
+                    $q->where('horario_inicio', '<', '13:00:00')
+                      ->orWhereHas('professor.docente.disciplina', function ($qd) {
+                          $qd->where('turno', 'Manhã')
+                             ->orWhereHas('cursoPeriodos', function ($qp) {
+                                 $qp->where('turno', 'Manhã');
+                             });
+                      });
+                });
             } elseif ($turno === 'Tarde' || $turno === 'vespertino') {
-                $query->where('horario_inicio', '>=', '13:00:00')
-                      ->where('horario_inicio', '<', '18:30:00');
+                $query->where(function ($q) {
+                    $q->whereBetween('horario_inicio', ['13:00:00', '18:29:59'])
+                      ->orWhereHas('professor.docente.disciplina', function ($qd) {
+                          $qd->where('turno', 'Tarde')
+                             ->orWhereHas('cursoPeriodos', function ($qp) {
+                                 $qp->where('turno', 'Tarde');
+                             });
+                      });
+                });
             } elseif ($turno === 'Noite' || $turno === 'noturno') {
-                $query->where('horario_inicio', '>=', '18:30:00');
+                $query->where(function ($q) {
+                    $q->where('horario_inicio', '>=', '18:30:00')
+                      ->orWhereHas('professor.docente.disciplina', function ($qd) {
+                          $qd->where('turno', 'Noite')
+                             ->orWhereHas('cursoPeriodos', function ($qp) {
+                                 $qp->where('turno', 'Noite');
+                             });
+                      });
+                });
             }
         }
 
@@ -741,14 +795,17 @@ XML;
 
     private function sincronizarProfessoresComDocentes(): void
     {
-        Docente::with('disciplina')->get()->each(function (Docente $docente) {
+        Docente::with(['disciplina.curso'])->get()->each(function (Docente $docente) {
             $professor = Professor::firstOrNew(['id' => $docente->id]);
+
+            $disciplinaNome = $docente->disciplina?->nome ?: 'Sem disciplina';
+            $cursoNome = $docente->disciplina?->curso?->nome ?: ($professor->curso && $professor->curso !== 'Não informado' ? $professor->curso : 'Não informado');
 
             $professor->forceFill([
                 'nome' => $docente->nome,
                 'email' => $professor->email ?: sprintf('professor%d@fatec.edu', $docente->id),
-                'disciplina' => $docente->disciplina?->nome ?: 'Sem disciplina',
-                'curso' => 'Não informado',
+                'disciplina' => $disciplinaNome,
+                'curso' => $cursoNome,
                 'ativo' => true,
             ])->save();
         });

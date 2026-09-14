@@ -1,19 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './CursoSelecaoModal.css';
 
 /**
  * CursoSelecaoModal - Modal para seleção de Curso, Turno e Semestre/Ano na tela do Aluno.
- * 
- * Regras:
- * - 5 Cursos com 6 Semestres:
- *   - Automação Industrial (Manhã e Noite)
- *   - Manutenção Industrial (Manhã e Noite)
- *   - Gestão da Tecnologia da Informação (Manhã e Noite)
- *   - Gestão Empresarial (Tarde e Noite)
- *   - Produção Fonográfica (Tarde)
- * - 2 Cursos Anuais com 1º e 2º Ano:
- *   - Processos Gerenciais (Tarde)
- *   - Análise e Desenvolvimento de Sistemas (Tarde)
  */
 const CURSOS_CONFIG = [
   {
@@ -81,10 +70,26 @@ const CURSOS_CONFIG = [
   },
 ];
 
-const CursoSelecaoModal = ({ cursoAtual, onClose, onConfirmar }) => {
+const CursoSelecaoModal = ({ cursosDisponiveis = [], cursoAtual, onClose, onConfirmar }) => {
+  const listaCursos = useMemo(() => {
+    if (cursosDisponiveis && cursosDisponiveis.length > 0) {
+      return cursosDisponiveis.map((c) => ({
+        id: c.id,
+        nome: c.nome,
+        codigo: c.codigo || c.nome.substring(0, 3).toUpperCase(),
+        tipoPeriodo: c.tipo_periodo || 'semestral',
+        totalPeriodos: c.total_periodos || 6,
+        turnos: c.turnos || ['Manhã', 'Noite'],
+        periodos: c.periodos || [],
+        descricao: `Tecnologia em ${c.nome}`,
+      }));
+    }
+    return CURSOS_CONFIG;
+  }, [cursosDisponiveis]);
+
   const [cursoSelecionado, setCursoSelecionado] = useState(() => {
-    if (!cursoAtual) return CURSOS_CONFIG[0];
-    return CURSOS_CONFIG.find((c) => c.nome === cursoAtual.nome) || CURSOS_CONFIG[0];
+    if (!cursoAtual) return listaCursos[0];
+    return listaCursos.find((c) => c.nome === cursoAtual.nome) || listaCursos[0];
   });
 
   const [turnoSelecionado, setTurnoSelecionado] = useState(() => {
@@ -95,14 +100,14 @@ const CursoSelecaoModal = ({ cursoAtual, onClose, onConfirmar }) => {
   });
 
   const [periodoSelecionado, setPeriodoSelecionado] = useState(() => {
-    return cursoAtual?.periodoNumero || 1;
+    return cursoAtual?.periodoNumero || 'todos';
   });
 
   const handleSelectCurso = (curso) => {
     setCursoSelecionado(curso);
     const turnoPadrao = curso.turnos[0] || 'Tarde';
     setTurnoSelecionado(turnoPadrao);
-    setPeriodoSelecionado(1);
+    setPeriodoSelecionado('todos');
   };
 
   const handleConfirmar = () => {
@@ -110,14 +115,17 @@ const CursoSelecaoModal = ({ cursoAtual, onClose, onConfirmar }) => {
 
     const isAnual = cursoSelecionado.tipoPeriodo === 'anual';
     const periodoTipo = isAnual ? 'Ano' : 'Semestre';
-    const nomeCompleto = `${cursoSelecionado.nome} - ${periodoSelecionado}º ${periodoTipo} (${turnoSelecionado})`;
+    const isTodos = periodoSelecionado === 'todos' || !periodoSelecionado;
+    const nomeCompleto = isTodos
+      ? `${cursoSelecionado.nome} — Todos os ${periodoTipo}s (${turnoSelecionado})`
+      : `${cursoSelecionado.nome} - ${periodoSelecionado}º ${periodoTipo} (${turnoSelecionado})`;
 
     onConfirmar({
       cursoId: cursoSelecionado.id,
       nome: cursoSelecionado.nome,
       codigo: cursoSelecionado.codigo,
       turno: turnoSelecionado,
-      periodoNumero: Number(periodoSelecionado),
+      periodoNumero: isTodos ? null : Number(periodoSelecionado),
       periodoTipo,
       nomeCompleto,
     });
@@ -155,7 +163,7 @@ const CursoSelecaoModal = ({ cursoAtual, onClose, onConfirmar }) => {
               <span className="step-number">1</span> Escolha o seu Curso:
             </label>
             <div className="cursos-cards-grid">
-              {CURSOS_CONFIG.map((c) => {
+              {listaCursos.map((c) => {
                 const isSelected = cursoSelecionado.id === c.id;
                 return (
                   <button
@@ -210,6 +218,13 @@ const CursoSelecaoModal = ({ cursoAtual, onClose, onConfirmar }) => {
                 <span className="step-number">3</span> {periodoLabel}:
               </label>
               <div className="periodos-options-row">
+                <button
+                  type="button"
+                  className={`option-btn ${periodoSelecionado === 'todos' || !periodoSelecionado ? 'selected' : ''}`}
+                  onClick={() => setPeriodoSelecionado('todos')}
+                >
+                  Todos os {periodoLabel}s
+                </button>
                 {Array.from({ length: cursoSelecionado.totalPeriodos }, (_, i) => i + 1).map((num) => {
                   const isSelected = Number(periodoSelecionado) === num;
                   return (
@@ -231,7 +246,7 @@ const CursoSelecaoModal = ({ cursoAtual, onClose, onConfirmar }) => {
           <div className="curso-selection-preview">
             <span className="preview-label">Grade que será consultada:</span>
             <strong className="preview-highlight">
-              🎓 {cursoSelecionado.nome} — {periodoSelecionado}º {periodoLabel} ({turnoSelecionado})
+              🎓 {cursoSelecionado.nome} — {periodoSelecionado === 'todos' || !periodoSelecionado ? `Todos os ${periodoLabel}s` : `${periodoSelecionado}º ${periodoLabel}`} ({turnoSelecionado})
             </strong>
           </div>
         </div>

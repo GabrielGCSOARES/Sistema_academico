@@ -82,6 +82,14 @@ class CursoSeeder extends Seeder
             $periodoTipo = $isAnual ? 'Ano' : 'Semestre';
 
             foreach ($dadosCurso['turnos'] as $turno) {
+                $siglaTurno = match ($turno) {
+                    'Manhã' => 'M',
+                    'Tarde' => 'T',
+                    'Noite' => 'N',
+                    default => substr($turno, 0, 1),
+                };
+                $siglaCursoTurno = "{$curso->codigo} - {$siglaTurno}";
+
                 for ($numero = 1; $numero <= $dadosCurso['total_periodos']; $numero++) {
                     $nomeCompleto = "{$curso->nome} - {$numero}º {$periodoTipo} ({$turno})";
 
@@ -94,6 +102,7 @@ class CursoSeeder extends Seeder
                         [
                             'periodo_tipo' => $periodoTipo,
                             'nome_completo' => $nomeCompleto,
+                            'sigla_curso_turno' => $siglaCursoTurno,
                         ]
                     );
                     $totalPeriodos++;

@@ -3,18 +3,34 @@ import { directorService } from '../../services/api';
 import CursoSelecaoModal from './CursoSelecaoModal';
 import './StudentHome.css';
 
-const DIAS_SEMANA_NOMES = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira'];
+const DIAS_SEMANA_NOMES = [
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+];
 
 const StudentHome = ({ onBack }) => {
   const [cursos, setCursos] = useState([]);
   const [docentes, setDocentes] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
 
-  // Estado do Modal de Seleção de Curso
+  // Estado do Modal de Seleção de Curso (Padrão: GTI - Matutino)
   const [showCursoModal, setShowCursoModal] = useState(false);
-  const [cursoInfo, setCursoInfo] = useState(null); // { nome, turno, periodoNumero, periodoTipo, nomeCompleto }
+  const [cursoInfo, setCursoInfo] = useState({
+    cursoId: 3,
+    nome: 'Gestão da Tecnologia da Informação',
+    codigo: 'GTI',
+    turno: 'Manhã',
+    periodoNumero: null,
+    periodoTipo: 'Semestre',
+    nomeCompleto: 'Gestão da Tecnologia da Informação — Manhã (GTI - Matutino)',
+  });
 
-  // Filtros por professor/disciplina
+  // Filtros por semestre/professor/disciplina
+  const [semestreFiltro, setSemestreFiltro] = useState('');
   const [professorId, setProfessorId] = useState('');
   const [disciplinaId, setDisciplinaId] = useState('');
 
@@ -28,10 +44,11 @@ const StudentHome = ({ onBack }) => {
   const carregarFiltros = useCallback(async () => {
     try {
       setCarregandoFiltros(true);
+      const cursoIdAtual = cursoInfo?.cursoId || 3;
       const [docentesResponse, disciplinasResponse, cursosResponse] = await Promise.all([
         directorService.getDocentes(),
-        directorService.getDisciplinas(),
-        directorService.getCursos(),
+        directorService.getDisciplinas({ curso_id: cursoIdAtual }),
+        directorService.getCursos ? directorService.getCursos() : Promise.resolve({ data: [] }),
       ]);
 
       setDocentes(docentesResponse?.data || []);
@@ -44,28 +61,48 @@ const StudentHome = ({ onBack }) => {
     } finally {
       setCarregandoFiltros(false);
     }
-  }, []);
+  }, [cursoInfo?.cursoId]);
 
   useEffect(() => {
     carregarFiltros();
   }, [carregarFiltros]);
 
-  // Carregar alocações da semana com base no turno do curso ou no professor/disciplina
+  // Carregar alocações da semana com base no curso, turno, semestre ou professor/disciplina
   const carregarGradeSemanal = useCallback(async () => {
     setCarregandoResultados(true);
     setErroResultados('');
 
     try {
       const params = {};
+      if (cursoInfo?.cursoId) {
+        params.curso_id = cursoInfo.cursoId;
+      }
       if (cursoInfo?.turno) {
         params.turno = cursoInfo.turno;
       }
+
+      const periodoAlvo = semestreFiltro || cursoInfo?.periodoNumero;
+      if (periodoAlvo && periodoAlvo !== 'todos') {
+        params.periodo_numero = Number(periodoAlvo);
+      }
+
       if (professorId) {
         params.professor_id = professorId;
       }
       if (disciplinaId) {
         params.disciplina_id = disciplinaId;
       }
+
+      // Calcula a data da Segunda-feira da semana atual
+      const agora = new Date();
+      const diaDaSemana = agora.getDay(); // 0 Dom, 1 Seg, ..., 6 Sab
+      const diffParaSegunda = diaDaSemana === 0 ? -6 : 1 - diaDaSemana;
+      const segunda = new Date(agora);
+      segunda.setDate(agora.getDate() + diffParaSegunda);
+      const ano = segunda.getFullYear();
+      const mes = String(segunda.getMonth() + 1).padStart(2, '0');
+      const dia = String(segunda.getDate()).padStart(2, '0');
+      params.inicio = `${ano}-${mes}-${dia}`;
 
       const response = await directorService.getAlocacoesAluno(params);
       setAlocacoesSemana(response?.data || []);
@@ -76,13 +113,13 @@ const StudentHome = ({ onBack }) => {
     } finally {
       setCarregandoResultados(false);
     }
-  }, [cursoInfo, professorId, disciplinaId]);
+  }, [cursoInfo, semestreFiltro, professorId, disciplinaId]);
 
   useEffect(() => {
     if (cursoInfo || (professorId && disciplinaId)) {
       carregarGradeSemanal();
     }
-  }, [cursoInfo, professorId, disciplinaId, carregarGradeSemanal]);
+  }, [cursoInfo, semestreFiltro, professorId, disciplinaId, carregarGradeSemanal]);
 
   const professorSelecionado = useMemo(
     () => docentes.find((docente) => Number(docente.id) === Number(professorId)),
@@ -90,14 +127,23 @@ const StudentHome = ({ onBack }) => {
   );
 
   const disciplinasDisponiveis = useMemo(() => {
-    if (!professorSelecionado?.disciplina_id) {
-      return professorSelecionado ? [] : disciplinas;
+    let lista = disciplinas;
+
+    if (professorSelecionado?.disciplina_id) {
+      lista = lista.filter(
+        (disciplina) => Number(disciplina.id) === Number(professorSelecionado.disciplina_id)
+      );
     }
 
-    return disciplinas.filter(
-      (disciplina) => Number(disciplina.id) === Number(professorSelecionado.disciplina_id)
-    );
-  }, [disciplinas, professorSelecionado]);
+    const periodoFiltroAtivo = semestreFiltro || (cursoInfo?.periodoNumero && cursoInfo.periodoNumero !== 'todos' ? cursoInfo.periodoNumero : null);
+    if (periodoFiltroAtivo) {
+      lista = lista.filter(
+        (disciplina) => !disciplina.periodo_numero || Number(disciplina.periodo_numero) === Number(periodoFiltroAtivo)
+      );
+    }
+
+    return lista;
+  }, [disciplinas, professorSelecionado, semestreFiltro, cursoInfo?.periodoNumero]);
 
   const formatarData = (data) => {
     const [ano, mes, dia] = String(data || '').slice(0, 10).split('-');
@@ -111,22 +157,22 @@ const StudentHome = ({ onBack }) => {
     if (!ano || !mes || !dia) return -1;
     const dt = new Date(Number(ano), Number(mes) - 1, Number(dia));
     const day = dt.getDay(); // 0 Dom, 1 Seg, 2 Ter, 3 Qua, 4 Qui, 5 Sex, 6 Sab
-    return day >= 1 && day <= 5 ? day - 1 : -1;
+    return day >= 1 && day <= 6 ? day - 1 : -1;
   };
 
   const formatarHorario = (horario) => String(horario || '').slice(0, 5) || '--:--';
 
-  // Agrupar alocações por dia da semana (0 = Segunda, 4 = Sexta)
+  // Agrupar alocações por dia da semana (0 = Segunda, ..., 5 = Sábado)
   const alocacoesPorDia = useMemo(() => {
-    const dias = [[], [], [], [], []];
+    const dias = [[], [], [], [], [], []];
     alocacoesSemana.forEach((aloc) => {
       const idx = getDiaSemanaIndice(aloc.data);
-      if (idx >= 0 && idx <= 4) {
+      if (idx >= 0 && idx <= 5) {
         dias[idx].push(aloc);
       }
     });
 
-    // Ordenar horários de cada dia
+    // Ordenar horários de cada dia cronologicamente
     dias.forEach((lista) => {
       lista.sort((a, b) => {
         const hA = String(a.horario_inicio || '');
@@ -137,6 +183,8 @@ const StudentHome = ({ onBack }) => {
 
     return dias;
   }, [alocacoesSemana]);
+
+  const hasFiltrosAtivos = Boolean(professorId || disciplinaId || semestreFiltro);
 
   return (
     <div className="student-home">
@@ -165,7 +213,8 @@ const StudentHome = ({ onBack }) => {
                 <div>
                   <h2 className="selected-course-title">{cursoInfo.nome}</h2>
                   <span className="selected-course-meta">
-                    {cursoInfo.periodoNumero}º {cursoInfo.periodoTipo} — Turno {cursoInfo.turno}
+                    {cursoInfo.periodoNumero ? `${cursoInfo.periodoNumero}º ${cursoInfo.periodoTipo} — ` : 'Todos os Semestres — '}
+                    Turno {cursoInfo.turno} {cursoInfo.codigo ? `(${cursoInfo.codigo} - ${cursoInfo.turno === 'Manhã' ? 'Matutino' : cursoInfo.turno})` : ''}
                   </span>
                 </div>
               ) : (
@@ -188,23 +237,24 @@ const StudentHome = ({ onBack }) => {
           </div>
         </section>
 
-        {/* Card de Filtros Opcionais de Professor e Disciplina */}
+        {/* Card de Filtros Opcionais de Semestre, Professor e Disciplina */}
         <section className="student-card filters-card" aria-labelledby="filters-title">
           <div className="section-heading">
             <div>
               <p className="section-kicker">Filtros Opcionais</p>
-              <h2 id="filters-title">Buscar por Professor ou Disciplina</h2>
+              <h2 id="filters-title">Buscar por Semestre, Professor ou Disciplina</h2>
             </div>
-            {(professorId || disciplinaId) && (
+            {hasFiltrosAtivos && (
               <button
                 type="button"
                 className="btn-clear-filters"
                 onClick={() => {
                   setProfessorId('');
                   setDisciplinaId('');
+                  setSemestreFiltro('');
                 }}
               >
-                Limpar Filtros de Professor
+                Limpar Filtros
               </button>
             )}
           </div>
@@ -228,6 +278,26 @@ const StudentHome = ({ onBack }) => {
                 >
                   {cursoInfo ? cursoInfo.nomeCompleto : 'Clique para escolher Curso e Semestre'}
                 </button>
+              </label>
+
+              {/* Semestre */}
+              <label className="filter-field">
+                <span>Semestre</span>
+                <select
+                  value={semestreFiltro}
+                  onChange={(event) => {
+                    setSemestreFiltro(event.target.value);
+                    setDisciplinaId('');
+                  }}
+                  disabled={carregandoFiltros}
+                >
+                  <option value="">Todos os semestres</option>
+                  {[1, 2, 3, 4, 5, 6].map((num) => (
+                    <option key={num} value={num}>
+                      {num}º Semestre
+                    </option>
+                  ))}
+                </select>
               </label>
 
               {/* Professor */}
@@ -263,12 +333,11 @@ const StudentHome = ({ onBack }) => {
                       : 'Todas as disciplinas'}
                   </option>
                   {disciplinasDisponiveis.map((disciplina) => {
-                    const siglaStr = disciplina.sigla
-                      ? `[${disciplina.sigla}${disciplina.sigla_secundaria ? ` / ${disciplina.sigla_secundaria}` : ''}] `
-                      : '';
+                    const siglaStr = disciplina.sigla ? `${disciplina.sigla} - ` : '';
+                    const semStr = disciplina.periodo_numero ? ` (${disciplina.periodo_numero}º Sem)` : '';
                     return (
                       <option key={disciplina.id} value={disciplina.id}>
-                        {siglaStr}{disciplina.nome}
+                        {`${siglaStr}${disciplina.nome}${semStr}`}
                       </option>
                     );
                   })}
@@ -332,7 +401,7 @@ const StudentHome = ({ onBack }) => {
             </div>
           )}
 
-          {/* Grade Semanal por Dias da Semana (Segunda a Sexta) */}
+          {/* Grade Semanal por Dias da Semana (Segunda a Sábado) */}
           {!carregandoResultados && !erroResultados && alocacoesSemana.length > 0 && (
             <div className="weekly-schedule-grid">
               {DIAS_SEMANA_NOMES.map((nomeDia, idx) => {
@@ -355,7 +424,10 @@ const StudentHome = ({ onBack }) => {
                       ) : (
                         aulasDoDia.map((aloc) => {
                           const profNome = aloc.professor?.nome || 'Professor não informado';
-                          const materia = aloc.professor?.disciplina || 'Disciplina';
+                          const discObj = aloc.professor?.docente?.disciplina;
+                          const sigla = discObj?.sigla || '';
+                          const materia = discObj?.nome || aloc.professor?.disciplina || 'Disciplina';
+                          const semestreNum = discObj?.periodo_numero;
                           const salaNome = aloc.sala?.nome || 'Sala não informada';
                           const predioNome = aloc.predio || aloc.sala?.predio || 'Prédio 1';
 
@@ -363,20 +435,33 @@ const StudentHome = ({ onBack }) => {
                             <article key={aloc.id} className="class-schedule-card">
                               <div className="class-card-top-row">
                                 <span className="class-time-badge">
-                                   {formatarHorario(aloc.horario_inicio)} às {formatarHorario(aloc.horario_fim)}
+                                  {formatarHorario(aloc.horario_inicio)} às {formatarHorario(aloc.horario_fim)}
                                 </span>
-                                {aloc.data && (
-                                  <span className="class-date-tag">
-                                     {formatarData(aloc.data)}
+                                {semestreNum && (
+                                  <span className="class-semester-tag">
+                                    {semestreNum}º Sem.
                                   </span>
                                 )}
                               </div>
 
-                              <h4 className="class-subject-title">{materia}</h4>
-                              <p className="class-professor-name"> {profNome}</p>
+                              {aloc.data && (
+                                <div className="class-date-tag">
+                                  {formatarData(aloc.data)}
+                                </div>
+                              )}
+
+                              <h4 className="class-subject-title">
+                                {`${sigla ? `${sigla} - ` : ''}${materia}`}
+                              </h4>
+
+                              <p className="class-professor-name">
+                                <strong>Professor:</strong> {profNome}
+                              </p>
 
                               <div className="class-location-footer">
-                                <span className="room-tag"> {salaNome}</span>
+                                <span className="room-tag">
+                                  <strong>Sala:</strong> {salaNome}
+                                </span>
                                 <span className="building-tag">{predioNome}</span>
                               </div>
                             </article>
@@ -400,6 +485,8 @@ const StudentHome = ({ onBack }) => {
           onClose={() => setShowCursoModal(false)}
           onConfirmar={(dados) => {
             setCursoInfo(dados);
+            setSemestreFiltro('');
+            setDisciplinaId('');
           }}
         />
       )}

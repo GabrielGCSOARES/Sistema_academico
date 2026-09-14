@@ -11,9 +11,14 @@ class CursoController extends Controller
     /**
      * Lista todos os cursos com seus períodos e turnos estruturados.
      */
-    public function listarCursos()
+    public function listarCursos(Request $request)
     {
-        $cursos = Curso::with(['periodos'])
+        $relations = ['periodos'];
+        if ($request->boolean('com_disciplinas')) {
+            $relations[] = 'periodos.disciplinas';
+        }
+
+        $cursos = Curso::with($relations)
             ->where('ativo', true)
             ->orderBy('nome')
             ->get();
@@ -22,11 +27,11 @@ class CursoController extends Controller
     }
 
     /**
-     * Retorna os detalhes de um curso específico.
+     * Retorna os detalhes de um curso específico com períodos e disciplinas estruturadas.
      */
     public function detalharCurso($id)
     {
-        $curso = Curso::with(['periodos', 'disciplinas'])->findOrFail($id);
+        $curso = Curso::with(['periodos.disciplinas', 'disciplinas'])->findOrFail($id);
         return response()->json($curso);
     }
 
@@ -35,7 +40,12 @@ class CursoController extends Controller
      */
     public function listarPeriodos(Request $request)
     {
-        $query = CursoPeriodo::with('curso');
+        $relations = ['curso'];
+        if ($request->boolean('com_disciplinas') || $request->has('com_disciplinas')) {
+            $relations[] = 'disciplinas';
+        }
+
+        $query = CursoPeriodo::with($relations);
 
         if ($request->filled('curso_id')) {
             $query->where('curso_id', $request->integer('curso_id'));
@@ -43,6 +53,14 @@ class CursoController extends Controller
 
         if ($request->filled('turno')) {
             $query->where('turno', $request->string('turno'));
+        }
+
+        if ($request->filled('sigla_curso_turno')) {
+            $query->where('sigla_curso_turno', $request->string('sigla_curso_turno'));
+        }
+
+        if ($request->filled('periodo_numero')) {
+            $query->where('periodo_numero', $request->integer('periodo_numero'));
         }
 
         if ($request->filled('periodo_tipo')) {
@@ -81,6 +99,14 @@ class CursoController extends Controller
         $periodoTipo = $isAnual ? 'Ano' : 'Semestre';
 
         foreach ($curso->turnos as $turno) {
+            $siglaTurno = match ($turno) {
+                'Manhã' => 'M',
+                'Tarde' => 'T',
+                'Noite' => 'N',
+                default => substr($turno, 0, 1),
+            };
+            $siglaCursoTurno = $curso->codigo ? "{$curso->codigo} - {$siglaTurno}" : null;
+
             for ($num = 1; $num <= $curso->total_periodos; $num++) {
                 CursoPeriodo::create([
                     'curso_id' => $curso->id,
@@ -88,6 +114,7 @@ class CursoController extends Controller
                     'periodo_numero' => $num,
                     'periodo_tipo' => $periodoTipo,
                     'nome_completo' => "{$curso->nome} - {$num}º {$periodoTipo} ({$turno})",
+                    'sigla_curso_turno' => $siglaCursoTurno,
                 ]);
             }
         }

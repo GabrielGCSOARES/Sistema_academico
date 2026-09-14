@@ -9,6 +9,7 @@ jest.mock('./services/api', () => ({
     getAlocacoesSemana: jest.fn(() => Promise.resolve({ data: [] })),
     getDisciplinas: jest.fn(() => Promise.resolve({ data: [] })),
     getDocentes: jest.fn(() => Promise.resolve({ data: [] })),
+    getCursos: jest.fn(() => Promise.resolve({ data: [] })),
     getAlocacoesAluno: jest.fn(() => Promise.resolve({ data: [] })),
   },
 }));
@@ -20,5 +21,5 @@ test('navega do painel do diretor para a consulta do aluno', async () => {
 
   fireEvent.click(screen.getByRole('button', { name: /ir para tela aluno/i }));
 
-  expect(await screen.findByRole('heading', { name: /consulta de aulas/i })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: /consulta de horários/i })).toBeInTheDocument();
 });

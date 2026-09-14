@@ -21,7 +21,7 @@ class Alocacao extends Model
     ];
 
     protected $casts = [
-        'data' => 'date',
+        'data' => 'date:Y-m-d',
         'horario_inicio' => 'datetime:H:i:s',
         'horario_fim' => 'datetime:H:i:s',
     ];

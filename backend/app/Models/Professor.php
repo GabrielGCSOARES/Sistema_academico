@@ -28,4 +28,9 @@ class Professor extends Model
     {
         return $this->hasMany(Alocacao::class)->where('data', now()->toDateString());
     }
+
+    public function docente()
+    {
+        return $this->hasOne(Docente::class, 'id', 'id');
+    }
 }

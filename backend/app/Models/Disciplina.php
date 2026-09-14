@@ -30,6 +30,12 @@ class Disciplina extends Model
         return $this->belongsTo(CursoPeriodo::class, 'curso_periodo_id');
     }
 
+    public function cursoPeriodos()
+    {
+        return $this->belongsToMany(CursoPeriodo::class, 'curso_periodo_disciplina', 'disciplina_id', 'curso_periodo_id')
+            ->withTimestamps();
+    }
+
     public function docentes()
     {
         return $this->hasMany(Docente::class);

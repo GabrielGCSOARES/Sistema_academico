@@ -260,10 +260,38 @@ class DisciplinaSeeder extends Seeder
             'TRATAMENTO TÉRMICO E TRATAMENTO DE SUPERFÍCIE',
         ];
         
+        $normalize = function ($str) {
+            $str = mb_strtoupper(trim($str));
+            $str = str_replace(['–', '—', '-'], ' ', $str);
+            $str = preg_replace('/[ÁÀÂÃÄ]/u', 'A', $str);
+            $str = preg_replace('/[ÉÈÊË]/u', 'E', $str);
+            $str = preg_replace('/[ÍÌÎÏ]/u', 'I', $str);
+            $str = preg_replace('/[ÓÒÔÕÖ]/u', 'O', $str);
+            $str = preg_replace('/[ÚÙÛÜ]/u', 'U', $str);
+            $str = preg_replace('/[Ç]/u', 'C', $str);
+            $str = preg_replace('/\s+/', ' ', $str);
+            return trim($str);
+        };
+
+        $knownAliases = [
+            'PROCESSOS GERENCIAS' => 'PROCESSOS GERENCIAIS',
+            'LÍNGUAGENS DE PROGRAMAÇÃO' => 'LINGUAGENS DE PROGRAMAÇÃO',
+            'METODOLOGIA DA PESQUISA CIENTÍFICO – TECNOLÓGICA' => 'METODOLOGIA DA PESQUISA CIENTIFICO TECNOLOGICA',
+        ];
+
+        $existentes = Disciplina::all()->mapWithKeys(function ($d) use ($normalize) {
+            return [$normalize($d->nome) => $d];
+        });
+
         foreach ($disciplinas as $nome) {
-            Disciplina::create([
-                'nome' => $nome
-            ]);
+            $alias = $knownAliases[$nome] ?? $nome;
+            $norm = $normalize($alias);
+            if (!$existentes->has($norm)) {
+                $criada = Disciplina::create([
+                    'nome' => $nome
+                ]);
+                $existentes->put($norm, $criada);
+            }
         }
         
         $this->command->info(count($disciplinas) . ' disciplinas criadas com sucesso!');

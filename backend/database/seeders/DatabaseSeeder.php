@@ -15,6 +15,9 @@ class DatabaseSeeder extends Seeder
             DisciplinaSeeder::class,
             DocenteSeeder::class,
             SalaSeeder::class,
+            GtiDisciplinasSeeder::class,
+            GtiGradeHorariaSeeder::class,
+            EstruturaCurricularSeeder::class,
         ]);
     }
 }

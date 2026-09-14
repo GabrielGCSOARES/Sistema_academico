@@ -16,7 +16,54 @@ class DocenteDisciplinaController extends Controller
      */
     public function listarDisciplinas(Request $request)
     {
-        $query = Disciplina::with(['curso', 'cursoPeriodo']);
+        $query = Disciplina::with(['curso', 'cursoPeriodo', 'cursoPeriodos']);
+
+        if ($request->filled('sigla_curso_turno')) {
+            $siglaCursoTurno = $request->string('sigla_curso_turno')->toString();
+            $query->whereHas('cursoPeriodos', function ($q) use ($siglaCursoTurno) {
+                $q->where('sigla_curso_turno', $siglaCursoTurno);
+            });
+        }
+
+        if ($request->filled('curso_id')) {
+            $cursoId = $request->integer('curso_id');
+            $query->where(function ($q) use ($cursoId) {
+                $q->where('curso_id', $cursoId)
+                  ->orWhereHas('cursoPeriodos', function ($qp) use ($cursoId) {
+                      $qp->where('curso_id', $cursoId);
+                  });
+            });
+        }
+
+        if ($request->filled('turno')) {
+            $turno = $request->string('turno')->toString();
+            $query->where(function ($q) use ($turno) {
+                $q->where('turno', $turno)
+                  ->orWhereHas('cursoPeriodos', function ($qp) use ($turno) {
+                      $qp->where('turno', $turno);
+                  });
+            });
+        }
+
+        if ($request->filled('periodo_numero')) {
+            $periodoNumero = $request->integer('periodo_numero');
+            $query->where(function ($q) use ($periodoNumero) {
+                $q->where('periodo_numero', $periodoNumero)
+                  ->orWhereHas('cursoPeriodos', function ($qp) use ($periodoNumero) {
+                      $qp->where('periodo_numero', $periodoNumero);
+                  });
+            });
+        }
+
+        if ($request->filled('curso_periodo_id')) {
+            $cpId = $request->integer('curso_periodo_id');
+            $query->where(function ($q) use ($cpId) {
+                $q->where('curso_periodo_id', $cpId)
+                  ->orWhereHas('cursoPeriodos', function ($qp) use ($cpId) {
+                      $qp->where('curso_periodos.id', $cpId);
+                  });
+            });
+        }
 
         if ($request->filled('busca')) {
             $busca = trim($request->string('busca')->toString());
@@ -47,7 +94,12 @@ class DocenteDisciplinaController extends Controller
             }
         }
 
-        $disciplinas = $query->orderBy('nome')->get()->unique('nome')->values();
+        if ($request->filled('curso_id') || $request->filled('sigla_curso_turno') || $request->filled('curso_periodo_id')) {
+            $disciplinas = $query->orderBy('periodo_numero')->orderBy('sigla')->orderBy('nome')->get();
+        } else {
+            $disciplinas = $query->orderBy('nome')->get()->unique('nome')->values();
+        }
+
         return response()->json($disciplinas);
     }
 
