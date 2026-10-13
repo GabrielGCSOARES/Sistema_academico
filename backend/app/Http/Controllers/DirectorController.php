@@ -7,7 +7,6 @@ use App\Models\Sala;
 use App\Models\Alocacao;
 use App\Models\Docente;
 use App\Models\Disciplina;
-use App\Models\Curso;
 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -190,77 +189,26 @@ class DirectorController extends Controller
         }
 
         if (!empty($dados['disciplina_id'])) {
-            $disciplina = Disciplina::find($dados['disciplina_id']);
-            if ($disciplina) {
-                $query->where(function ($q) use ($disciplina, $dados) {
-                    $q->whereHas('professor', function ($qp) use ($disciplina) {
-                        $qp->where('disciplina', $disciplina->nome);
-                    })->orWhereHas('professor.docente', function ($qd) use ($dados) {
-                        $qd->where('disciplina_id', $dados['disciplina_id']);
-                    });
-                });
-            }
+            $query->whereHas('professor.docente', function ($q) use ($dados) {
+                $q->where('disciplina_id', $dados['disciplina_id']);
+            });
         }
 
+        // Filtro por curso + semestre + turno usando a tabela pivot curso_periodo_disciplina.
+        // Caminho: alocacao → professor → docente → disciplina → cursoPeriodos (pivot).
+        // Garante que apenas disciplinas do curso e semestre correto do aluno são retornadas.
         if (!empty($dados['curso_id'])) {
-            $curso = Curso::find($dados['curso_id']);
-            $query->where(function ($q) use ($dados, $curso) {
-                $q->whereHas('professor.docente.disciplina', function ($qd) use ($dados) {
-                    $qd->where('curso_id', $dados['curso_id'])
-                       ->orWhereHas('cursoPeriodos', function ($qp) use ($dados) {
-                           $qp->where('curso_id', $dados['curso_id']);
-                       });
-                });
-                if ($curso) {
-                    $q->orWhereHas('professor', function ($qp) use ($curso) {
-                        $qp->where('curso', $curso->nome);
-                    });
+            $query->whereHas('professor.docente.disciplina.cursoPeriodos', function ($q) use ($dados) {
+                $q->where('curso_id', $dados['curso_id']);
+
+                if (!empty($dados['periodo_numero'])) {
+                    $q->where('periodo_numero', $dados['periodo_numero']);
+                }
+
+                if (!empty($dados['turno'])) {
+                    $q->where('turno', $dados['turno']);
                 }
             });
-        }
-
-        if (!empty($dados['periodo_numero'])) {
-            $query->whereHas('professor.docente.disciplina', function ($qd) use ($dados) {
-                $qd->where('periodo_numero', $dados['periodo_numero'])
-                   ->orWhereHas('cursoPeriodos', function ($qp) use ($dados) {
-                       $qp->where('periodo_numero', $dados['periodo_numero']);
-                   });
-            });
-        }
-
-        if (!empty($dados['turno'])) {
-            $turno = $dados['turno'];
-            if ($turno === 'Manhã' || $turno === 'matutino') {
-                $query->where(function ($q) {
-                    $q->where('horario_inicio', '<', '13:00:00')
-                      ->orWhereHas('professor.docente.disciplina', function ($qd) {
-                          $qd->where('turno', 'Manhã')
-                             ->orWhereHas('cursoPeriodos', function ($qp) {
-                                 $qp->where('turno', 'Manhã');
-                             });
-                      });
-                });
-            } elseif ($turno === 'Tarde' || $turno === 'vespertino') {
-                $query->where(function ($q) {
-                    $q->whereBetween('horario_inicio', ['13:00:00', '18:29:59'])
-                      ->orWhereHas('professor.docente.disciplina', function ($qd) {
-                          $qd->where('turno', 'Tarde')
-                             ->orWhereHas('cursoPeriodos', function ($qp) {
-                                 $qp->where('turno', 'Tarde');
-                             });
-                      });
-                });
-            } elseif ($turno === 'Noite' || $turno === 'noturno') {
-                $query->where(function ($q) {
-                    $q->where('horario_inicio', '>=', '18:30:00')
-                      ->orWhereHas('professor.docente.disciplina', function ($qd) {
-                          $qd->where('turno', 'Noite')
-                             ->orWhereHas('cursoPeriodos', function ($qp) {
-                                 $qp->where('turno', 'Noite');
-                             });
-                      });
-                });
-            }
         }
 
         $alocacoes = $query->orderBy('data')->orderBy('horario_inicio')->get();

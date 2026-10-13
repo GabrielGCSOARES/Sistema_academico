@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             GtiDisciplinasSeeder::class,
             GtiGradeHorariaSeeder::class,
             EstruturaCurricularSeeder::class,
+            AtribuirProfessoresDisciplinasSeeder::class,
         ]);
     }
 }

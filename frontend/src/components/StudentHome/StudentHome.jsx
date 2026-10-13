@@ -17,16 +17,16 @@ const StudentHome = ({ onBack }) => {
   const [docentes, setDocentes] = useState([]);
   const [disciplinas, setDisciplinas] = useState([]);
 
-  // Estado do Modal de Seleção de Curso (Padrão: GTI - Matutino)
+  // Estado do Modal de Seleção de Curso (Padrão: GTI - Matutino - 1º Semestre)
   const [showCursoModal, setShowCursoModal] = useState(false);
   const [cursoInfo, setCursoInfo] = useState({
     cursoId: 3,
     nome: 'Gestão da Tecnologia da Informação',
     codigo: 'GTI',
     turno: 'Manhã',
-    periodoNumero: null,
+    periodoNumero: 1,
     periodoTipo: 'Semestre',
-    nomeCompleto: 'Gestão da Tecnologia da Informação — Manhã (GTI - Matutino)',
+    nomeCompleto: 'Gestão da Tecnologia da Informação - 1º Semestre (Manhã)',
   });
 
   // Filtros por semestre/professor/disciplina
