@@ -194,20 +194,36 @@ class DirectorController extends Controller
             });
         }
 
-        // Filtro por curso + semestre + turno usando a tabela pivot curso_periodo_disciplina.
-        // Caminho: alocacao → professor → docente → disciplina → cursoPeriodos (pivot).
-        // Garante que apenas disciplinas do curso e semestre correto do aluno são retornadas.
+        // Filtro por curso + semestre + turno.
+        // Aceita disciplinas vinculadas via pivot (curso_periodo_disciplina) OU via coluna direta (disciplinas.curso_id).
+        // Isso garante compatibilidade com todos os seeders, independentemente de como a disciplina foi inserida.
         if (!empty($dados['curso_id'])) {
-            $query->whereHas('professor.docente.disciplina.cursoPeriodos', function ($q) use ($dados) {
-                $q->where('curso_id', $dados['curso_id']);
+            $query->where(function ($outer) use ($dados) {
+                // Caminho 1: via pivot curso_periodo_disciplina (caminho principal)
+                $outer->whereHas('professor.docente.disciplina.cursoPeriodos', function ($q) use ($dados) {
+                    $q->where('curso_id', $dados['curso_id']);
 
-                if (!empty($dados['periodo_numero'])) {
-                    $q->where('periodo_numero', $dados['periodo_numero']);
-                }
+                    if (!empty($dados['periodo_numero'])) {
+                        $q->where('periodo_numero', $dados['periodo_numero']);
+                    }
 
-                if (!empty($dados['turno'])) {
-                    $q->where('turno', $dados['turno']);
-                }
+                    if (!empty($dados['turno'])) {
+                        $q->where('turno', $dados['turno']);
+                    }
+                });
+
+                // Caminho 2: fallback via coluna direta disciplinas.curso_id
+                $outer->orWhereHas('professor.docente.disciplina', function ($q) use ($dados) {
+                    $q->where('curso_id', $dados['curso_id']);
+
+                    if (!empty($dados['periodo_numero'])) {
+                        $q->where('periodo_numero', $dados['periodo_numero']);
+                    }
+
+                    if (!empty($dados['turno'])) {
+                        $q->where('turno', $dados['turno']);
+                    }
+                });
             });
         }
 
